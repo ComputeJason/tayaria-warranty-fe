@@ -1,0 +1,100 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+
+    --card: 0 0% 13.3%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 41 100% 50%;
+    --primary-foreground: 0 0% 10%;
+
+    --secondary: 0 75% 46%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 63.9%;
+
+    --accent: 41 100% 50%;
+    --accent-foreground: 0 0% 10%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 41 100% 50%;
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-tayaria-black text-foreground;
+    background-image: url('/lovable-uploads/d08f7093-df56-4967-a199-cc7639923208.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-color: #0A0A0A;
+  }
+}
+
+@layer components {
+  .tayaria-button {
+    @apply bg-tayaria-yellow hover:bg-tayaria-yellow-dark text-tayaria-black font-semibold py-3 px-6 rounded-md transition-colors duration-200 flex items-center justify-center gap-2;
+  }
+  
+  .tayaria-button-secondary {
+    @apply bg-tayaria-darkgray hover:bg-tayaria-gray text-white font-semibold py-3 px-6 rounded-md transition-colors duration-200 flex items-center justify-center gap-2;
+  }
+  
+  .tayaria-card {
+    @apply bg-tayaria-darkgray/90 backdrop-blur-sm text-white p-5 rounded-md;
+  }
+  
+  .tayaria-input {
+    @apply bg-tayaria-gray text-white rounded-md border border-tayaria-lightgray/30 p-2 w-full focus:outline-none focus:ring-2 focus:ring-tayaria-yellow;
+  }
+  
+  .tayaria-input-label {
+    @apply text-tayaria-yellow font-semibold mb-1;
+  }
+  
+  .tayaria-select {
+    @apply bg-tayaria-yellow text-tayaria-black font-semibold py-2 px-4 rounded-md appearance-none;
+  }
+  
+  .step-active {
+    @apply text-tayaria-yellow font-bold;
+  }
+  
+  .step-inactive {
+    @apply text-gray-400;
+  }
+  
+  .step-circle-active {
+    @apply bg-tayaria-yellow text-tayaria-black;
+  }
+  
+  .step-circle-inactive {
+    @apply bg-tayaria-gray text-white;
+  }
+  
+  .step-circle-completed {
+    @apply bg-green-500 text-white;
+  }
+}
