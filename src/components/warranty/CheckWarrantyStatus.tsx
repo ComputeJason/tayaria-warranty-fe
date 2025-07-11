@@ -20,6 +20,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import TermsAndConditions, { TermsAndConditionsContent } from './TermsAndConditions';
+import { warrantyApi, convertApiWarrantyToFrontend } from '@/services/warrantyApi';
+import { useToast } from "@/components/ui/use-toast";
 
 // Mock data types
 interface Warranty {
@@ -48,6 +50,8 @@ export function CheckWarrantyStatus({ initialCarPlate, onNavigateToRegister }: C
   const [warranties, setWarranties] = useState<Warranty[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -57,80 +61,35 @@ export function CheckWarrantyStatus({ initialCarPlate, onNavigateToRegister }: C
   });
 
   const onSubmit = async (data: FormData) => {
+    setIsLoading(true);
     setHasSearched(true);
-    // TODO: Replace with actual API call
-    // Mock data for demonstration
-    const mockWarranties: Warranty[] = [
-      // Active warranties
-      {
-        id: "W001",
-        carPlate: "SKA1234A",
-        registrationDate: "2024-01-15",
-        expiryDate: "2025-01-15",
-        purchaseDate: "2024-01-10",
-        status: "active",
-        tyreDetails: "Michelin Pilot Sport 4 (225/45R17)",
-        notes: "Regular maintenance required. Next check due in 3 months."
-      },
-      {
-        id: "W002",
-        carPlate: "SKA1234A",
-        registrationDate: "2024-02-01",
-        expiryDate: "2025-02-01",
-        purchaseDate: "2024-01-25",
-        status: "active",
-        tyreDetails: "Bridgestone Potenza RE003 (235/40R18)",
-        notes: "High-performance tyres. Monitor wear pattern."
-      },
-      // Expired warranty
-      {
-        id: "W003",
-        carPlate: "SKA1234A",
-        registrationDate: "2023-01-01",
-        expiryDate: "2024-01-01",
-        purchaseDate: "2022-12-20",
-        status: "expired",
-        tyreDetails: "Goodyear Eagle F1 (215/45R17)",
-        notes: "Warranty expired. Consider replacement."
-      },
-      // Used warranty (claim made)
-      {
-        id: "W004",
-        carPlate: "SKA1234A",
-        registrationDate: "2023-06-01",
-        expiryDate: "2024-06-01",
-        purchaseDate: "2023-05-25",
-        status: "used",
-        tyreDetails: "Continental PremiumContact 6 (225/45R17)",
-        notes: "Warranty used for puncture repair on 2024-01-15"
-      },
-      // Different car plate - only active warranties
-      {
-        id: "W005",
-        carPlate: "SCC9012C",
-        registrationDate: "2024-01-01",
-        expiryDate: "2025-01-01",
-        purchaseDate: "2023-12-20",
-        status: "active",
-        tyreDetails: "Yokohama Advan Sport V105 (245/40R18)",
-        notes: "Premium performance tyres. Regular rotation recommended."
-      },
-      {
-        id: "W006",
-        carPlate: "SCC9012C",
-        registrationDate: "2024-02-15",
-        expiryDate: "2025-02-15",
-        purchaseDate: "2024-02-10",
-        status: "active",
-        tyreDetails: "Pirelli P Zero (255/35R19)",
-        notes: "Ultra high-performance tyres. Monitor pressure weekly."
+    
+    try {
+      // Call the backend API
+      const apiWarranties = await warrantyApi.getWarrantiesByCarPlate(data.carPlate);
+      
+      // Convert backend format to frontend format
+      const frontendWarranties = apiWarranties.map(convertApiWarrantyToFrontend);
+      
+      setWarranties(frontendWarranties);
+      
+      if (frontendWarranties.length === 0) {
+        toast({
+          title: "No Warranties Found",
+          description: `No warranties found for car plate: ${data.carPlate}`,
+        });
       }
-    ];
-
-    // Filter based on car plate
-    const filteredWarranties = mockWarranties.filter(w => w.carPlate === data.carPlate);
-
-    setWarranties(filteredWarranties);
+    } catch (error) {
+      console.error("Error fetching warranties:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to fetch warranties",
+        variant: "destructive",
+      });
+      setWarranties([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -150,8 +109,8 @@ export function CheckWarrantyStatus({ initialCarPlate, onNavigateToRegister }: C
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full">
-            Check Status
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? "Checking..." : "Check Status"}
           </Button>
         </form>
       </Form>

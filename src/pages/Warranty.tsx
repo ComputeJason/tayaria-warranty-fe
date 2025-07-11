@@ -8,15 +8,34 @@ import { useToast } from "@/components/ui/use-toast";
 import { CheckWarrantyStatus } from '@/components/warranty/CheckWarrantyStatus';
 import { RegisterWarranty } from '@/components/warranty/RegisterWarranty';
 import TermsAndConditions from '@/components/warranty/TermsAndConditions';
+import { warrantyApi, convertFormDataToApiRequest } from '@/services/warrantyApi';
+import { testEnvironmentConfig } from '@/utils/envTest';
+
+// Type for the warranty form data
+interface WarrantyFormData {
+  name?: string;
+  contactNumber?: string;
+  email?: string;
+  purchaseDate?: string;
+  carPlate?: string;
+  receipt?: string;
+  receiptFile?: File;
+}
 
 export default function Warranty() {
   const [activeTab, setActiveTab] = useState("register");
   const [carPlate, setCarPlate] = useState("");
   const [showTerms, setShowTerms] = useState(false);
-  const [formData, setFormData] = useState<any>(null);
+  const [formData, setFormData] = useState<WarrantyFormData | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Test environment configuration on component mount
+  React.useEffect(() => {
+    testEnvironmentConfig();
+  }, []);
 
   // Check if we have a car plate from registration
   React.useEffect(() => {
@@ -28,18 +47,37 @@ export default function Warranty() {
     }
   }, [location]);
 
-  const handleTermsAccept = () => {
+  const handleTermsAccept = async () => {
     setShowTerms(false);
     if (formData) {
-      // TODO: Replace with actual API call
-      console.log("Form submitted:", formData);
-      // Mock successful registration
-      setCarPlate(formData.carPlate);
-      setActiveTab("check");
-      toast({
-        title: "Success",
-        description: "Warranty registered successfully!",
-      });
+      setIsRegistering(true);
+      try {
+        // Convert form data to API request format
+        const apiRequest = convertFormDataToApiRequest(formData);
+        
+        // Call the backend API
+        const warranty = await warrantyApi.registerWarranty(apiRequest);
+        
+        console.log("Warranty registered:", warranty);
+        
+        // Update UI state
+        setCarPlate(formData.carPlate || "");
+        setActiveTab("check");
+        
+        toast({
+          title: "Success",
+          description: "Warranty registered successfully!",
+        });
+      } catch (error) {
+        console.error("Error registering warranty:", error);
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to register warranty",
+          variant: "destructive",
+        });
+      } finally {
+        setIsRegistering(false);
+      }
     }
   };
 
@@ -87,6 +125,7 @@ export default function Warranty() {
         onOpenChange={setShowTerms}
         onAccept={handleTermsAccept}
         formData={formData}
+        isLoading={isRegistering}
       />
     </div>
   );

@@ -15,6 +15,7 @@ interface TermsAndConditionsProps {
   onAccept: () => void;
   formData?: any;
   onSubmit?: (data: any) => void;
+  isLoading?: boolean;
 }
 
 export const TermsAndConditionsContent = () => (
@@ -152,6 +153,7 @@ const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({
   onAccept,
   formData,
   onSubmit,
+  isLoading,
 }) => {
   const [accepted, setAccepted] = React.useState(false);
 
@@ -198,10 +200,10 @@ const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({
             </Button>
             <Button
               onClick={handleAccept}
-              disabled={!accepted}
+              disabled={!accepted || isLoading}
               className="bg-tayaria-yellow hover:bg-tayaria-yellow/90 text-black disabled:opacity-50"
             >
-              Accept & Continue
+              {isLoading ? 'Accepting...' : 'Accept & Continue'}
             </Button>
           </div>
         </div>

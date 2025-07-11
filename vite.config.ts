@@ -19,4 +19,10 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    target: 'es2020', // Target ES2020 for better Node.js 14 compatibility
+  },
+  esbuild: {
+    target: 'es2020', // Ensure esbuild also targets ES2020
+  },
 }));

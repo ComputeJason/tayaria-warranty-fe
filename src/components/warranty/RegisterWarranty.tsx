@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AlertTriangle, Eye, Upload, FileText, Image } from "lucide-react";
+import { warrantyApi, convertFormDataToApiRequest } from '@/services/warrantyApi';
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -26,14 +27,25 @@ const formSchema = z.object({
   email: z.string().email("Please enter a valid email"),
   purchaseDate: z.string().min(1, "Purchase date is required"),
   carPlate: z.string().min(1, "Car plate is required"),
-  receipt: z.instanceof(File).refine((file) => file !== null, "Receipt upload is required"),
+  receipt: z.string().min(1, "Receipt upload is required"),
 });
 
 type FormData = z.infer<typeof formSchema>;
 
+// Extended type for internal use that includes the actual file
+interface ExtendedFormData {
+  name?: string;
+  contactNumber?: string;
+  email?: string;
+  purchaseDate?: string;
+  carPlate?: string;
+  receipt?: string;
+  receiptFile?: File;
+}
+
 interface RegisterWarrantyProps {
   onSuccess: (carPlate: string) => void;
-  onShowTerms: (data: FormData) => void;
+  onShowTerms: (data: ExtendedFormData) => void;
 }
 
 export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyProps) {
@@ -76,7 +88,10 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
     }
 
     setUploadedFile(file);
-    form.setValue("receipt", file);
+    
+    // Generate a fake URL for the backend API since file upload isn't implemented yet
+    const fakeUrl = `https://example.com/receipts/${file.name}`;
+    form.setValue("receipt", fakeUrl);
     form.clearErrors("receipt");
 
     // Create preview URL for images
@@ -134,7 +149,13 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
   };
 
   const onSubmit = async (data: FormData) => {
-    onShowTerms(data);
+    // For now, we'll still show terms first, but we could also submit directly
+    // The actual API call will happen in the parent component after terms acceptance
+    const extendedData: ExtendedFormData = {
+      ...data,
+      receiptFile: uploadedFile || undefined
+    };
+    onShowTerms(extendedData);
   };
 
   return (
