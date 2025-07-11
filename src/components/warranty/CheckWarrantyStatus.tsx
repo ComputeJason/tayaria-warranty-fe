@@ -22,6 +22,7 @@ import {
 import TermsAndConditions, { TermsAndConditionsContent } from './TermsAndConditions';
 import { warrantyApi, convertApiWarrantyToFrontend } from '@/services/warrantyApi';
 import { useToast } from "@/components/ui/use-toast";
+import { format } from 'date-fns';
 
 // Mock data types
 interface Warranty {
@@ -61,6 +62,16 @@ export function CheckWarrantyStatus({ initialCarPlate, onNavigateToRegister }: C
   });
 
   const onSubmit = async (data: FormData) => {
+    // 1. If car plate field is empty, show error and return
+    if (!data.carPlate || data.carPlate.trim() === "") {
+      toast({
+        title: "Error",
+        description: "Carplate field is empty",
+        variant: "destructive",
+        duration: 5000,
+      });
+      return;
+    }
     setIsLoading(true);
     setHasSearched(true);
     
@@ -68,23 +79,28 @@ export function CheckWarrantyStatus({ initialCarPlate, onNavigateToRegister }: C
       // Call the backend API
       const apiWarranties = await warrantyApi.getWarrantiesByCarPlate(data.carPlate);
       
-      // Convert backend format to frontend format
-      const frontendWarranties = apiWarranties.map(convertApiWarrantyToFrontend);
-      
-      setWarranties(frontendWarranties);
-      
-      if (frontendWarranties.length === 0) {
+      // If null or not an array, treat as no warranties found
+      if (!Array.isArray(apiWarranties) || apiWarranties.length === 0) {
+        setWarranties([]);
         toast({
           title: "No Warranties Found",
-          description: `No warranties found for car plate: ${data.carPlate}`,
+          description: "This Carplate has no warranties registered",
+          variant: "destructive",
+          duration: 5000,
         });
+        return;
       }
+      // Convert backend format to frontend format
+      const frontendWarranties = apiWarranties.map(convertApiWarrantyToFrontend);
+      setWarranties(frontendWarranties);
+      
     } catch (error) {
-      console.error("Error fetching warranties:", error);
+      // 4. Hide technical errors, show generic error
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to fetch warranties",
+        description: "Something went wrong. Please try again later.",
         variant: "destructive",
+        duration: 5000,
       });
       setWarranties([]);
     } finally {
@@ -155,10 +171,10 @@ export function CheckWarrantyStatus({ initialCarPlate, onNavigateToRegister }: C
                     </div>
                     <div className="space-y-2">
                       <p className="text-sm text-gray-600">
-                        <strong>Purchase Date:</strong> {warranty.purchaseDate}
+                        <strong>Purchase Date:</strong> {warranty.purchaseDate ? format(new Date(warranty.purchaseDate), 'dd-MM-yyyy') : ''}
                       </p>
                       <p className="text-sm text-gray-600">
-                        <strong>Valid until:</strong> {warranty.expiryDate}
+                        <strong>Valid until:</strong> {warranty.expiryDate ? format(new Date(warranty.expiryDate), 'dd-MM-yyyy') : ''}
                       </p>
                     </div>
                     <div className="flex justify-between items-center">

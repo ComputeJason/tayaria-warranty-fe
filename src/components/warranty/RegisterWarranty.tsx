@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { AlertTriangle, Eye, Upload, FileText, Image } from "lucide-react";
 import { warrantyApi, convertFormDataToApiRequest } from '@/services/warrantyApi';
+import { isAfter, isBefore, subDays, startOfDay, parseISO } from 'date-fns';
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -48,11 +49,28 @@ interface RegisterWarrantyProps {
   onShowTerms: (data: ExtendedFormData) => void;
 }
 
+// Helper to get today in Singapore time (UTC+8)
+function getTodaySgt() {
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  return startOfDay(new Date(utc + 8 * 60 * 60000));
+}
+// Helper to format date as YYYY-MM-DD
+function formatDateYYYYMMDD(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyProps) {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [showSampleModal, setShowSampleModal] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+
+  const today = getTodaySgt();
+  const minDate = subDays(today, 7); // 8 days including today
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -60,7 +78,7 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
       name: "",
       contactNumber: "",
       email: "",
-      purchaseDate: "",
+      purchaseDate: formatDateYYYYMMDD(today),
       carPlate: "",
     },
   });
@@ -169,7 +187,7 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
             <FormItem>
               <FormLabel>Name</FormLabel>
               <FormControl>
-                <Input placeholder="Enter your name" {...field} />
+                <Input placeholder="Enter your name" {...field} className="bg-white text-black"/>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -183,7 +201,7 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
             <FormItem>
               <FormLabel>Contact Number</FormLabel>
               <FormControl>
-                <Input placeholder="Enter your contact number" {...field} />
+                <Input placeholder="Enter your contact number" {...field} className="bg-white text-black" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -197,7 +215,7 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="Enter your email" type="email" {...field} />
+                <Input placeholder="Enter your email" type="email" {...field} className="bg-white text-black" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -211,7 +229,28 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
               <FormItem>
                 <FormLabel>Purchase Date</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter purchase date" type="date" {...field} />
+                  <Input
+                    placeholder="Enter purchase date"
+                    type="date"
+                    min={formatDateYYYYMMDD(minDate)}
+                    max={formatDateYYYYMMDD(today)}
+                    className="bg-white text-black"
+                    {...field}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      if (value) {
+                        const selected = startOfDay(parseISO(value));
+                        if (isBefore(selected, minDate) || isAfter(selected, today)) {
+                          form.setError("purchaseDate", {
+                            message: "Cannot register warranty more than 7 days after purchase",
+                          });
+                        } else {
+                          form.clearErrors("purchaseDate");
+                        }
+                      }
+                      field.onBlur && field.onBlur();
+                    }}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -225,7 +264,7 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
             <FormItem>
               <FormLabel>Car Plate</FormLabel>
               <FormControl>
-                <Input placeholder="Enter your car plate" {...field} />
+                <Input placeholder="Enter your car plate" {...field} className="bg-white text-black"/>
               </FormControl>
               <FormMessage />
             </FormItem>

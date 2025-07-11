@@ -72,7 +72,9 @@ const mockClaims: Claim[] = [
     status: 'approved',
     createdAt: '2024-03-18T09:15:00Z',
     dateSettled: '2024-03-19T14:30:00Z',
-    dateClosed: '2024-03-20T10:00:00Z'
+    dateClosed: '2024-03-20T10:00:00Z',
+    rejectionReason: 'Warranty expired and customer provided insufficient documentation for claim verification.'
+
   },
   {
     id: '4',
