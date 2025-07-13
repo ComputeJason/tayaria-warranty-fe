@@ -22,6 +22,7 @@ import ManageClaims from "./pages/master/ManageClaims";
 import ManageWarranties from "./pages/master/ManageWarranties";
 import Dashboard from "./pages/master/Dashboard";
 import CreateRetailAccount from "./pages/master/CreateRetailAccount";
+import MasterRoot from "./pages/master/MasterRoot";
 
 import NotFound from "./pages/NotFound";
 
@@ -60,7 +61,7 @@ const App = () => (
                 />
 
                 {/* Master routes */}
-                <Route path="/master" element={<Navigate to="/master/claims" replace />} />
+                <Route path="/master" element={<MasterRoot />} />
                 <Route
                   path="/master/login"
                   element={

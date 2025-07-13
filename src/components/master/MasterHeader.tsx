@@ -13,8 +13,11 @@ const MasterHeader: React.FC<MasterHeaderProps> = ({ title, showBack = false }) 
   const { signOut } = useAuth();
 
   const handleLogout = () => {
-    signOut();
-    navigate('/master/login');
+    signOut('master');
+    // Use setTimeout to ensure state updates before navigation
+    setTimeout(() => {
+      navigate('/master/login', { replace: true });
+    }, 0);
   };
 
   return (

@@ -1,4 +1,5 @@
 import { getApiUrl } from '@/config/api';
+import { authApi } from '@/services/authApi';
 
 // Types matching the backend API
 export interface CreateRetailAccountRequest {
@@ -97,14 +98,27 @@ export const masterApi = {
     
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: authApi.getAuthHeaders('master'),
       body: JSON.stringify(data),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      
+      // Handle specific error cases
+      if (response.status === 401) {
+        throw new Error('Authentication required. Please login again.');
+      }
+      if (response.status === 403) {
+        throw new Error('You do not have permission to create retail accounts.');
+      }
+      if (response.status === 409) {
+        throw new Error('Username already exists. Please choose a different username.');
+      }
+      if (response.status === 400) {
+        throw new Error('Invalid request. Please check your input.');
+      }
+      
       const error = errorData.error || `Failed to create retail account: ${response.status}`;
       
       if (import.meta.env.DEV) {
@@ -131,10 +145,21 @@ export const masterApi = {
       console.log('🔄 Fetching retail accounts:', { url });
     }
     
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: authApi.getAuthHeaders('master')
+    });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      
+      // Handle specific error cases
+      if (response.status === 401) {
+        throw new Error('Authentication required. Please login again.');
+      }
+      if (response.status === 403) {
+        throw new Error('You do not have permission to view retail accounts.');
+      }
+      
       const error = errorData.error || `Failed to fetch retail accounts: ${response.status}`;
       
       if (import.meta.env.DEV) {
