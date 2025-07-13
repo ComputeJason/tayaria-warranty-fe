@@ -3,7 +3,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import AdminHeader from '@/components/admin/AdminHeader';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Plus, ChevronDown, ChevronUp, ArrowUpDown } from 'lucide-react';
+import { Search, Plus, ChevronDown, ChevronUp, ArrowUpDown, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import {
   Dialog,
@@ -27,91 +27,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { 
+  claimsApi, 
+  convertFormDataToCreateClaimRequest, 
+  convertApiResponseToFrontendClaim,
+  type Claim 
+} from '@/services/claimsApi';
 
-// TODO: Replace with actual API types when BE is ready
-interface Claim {
-  id: string;
-  customerName: string;
-  phoneNumber: string;
-  email: string;
-  carPlate: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
-  dateSettled?: string;
-  rejectionReason?: string;
-  dateClosed?: string;
-}
-
-// TODO: Replace with actual API calls when BE is ready
-const mockClaims: Claim[] = [
-  {
-    id: '1',
-    customerName: 'John Doe',
-    phoneNumber: '+60123456789',
-    email: 'john@example.com',
-    carPlate: 'ABC123',
-    status: 'pending',
-    createdAt: '2024-03-20T10:00:00Z'
-  },
-  {
-    id: '2',
-    customerName: 'Jane Smith',
-    phoneNumber: '+60198765432',
-    email: 'jane@example.com',
-    carPlate: 'XYZ789',
-    status: 'approved',
-    createdAt: '2024-03-19T15:30:00Z',
-    dateSettled: '2024-03-20T09:15:00Z'
-  },
-  {
-    id: '3',
-    customerName: 'Michael Brown',
-    phoneNumber: '+60123456790',
-    email: 'michael@example.com',
-    carPlate: 'DEF456',
-    status: 'approved',
-    createdAt: '2024-03-18T09:15:00Z',
-    dateSettled: '2024-03-19T14:30:00Z',
-    dateClosed: '2024-03-20T10:00:00Z',
-    rejectionReason: 'Warranty expired and customer provided insufficient documentation for claim verification.'
-
-  },
-  {
-    id: '4',
-    customerName: 'Sarah Wilson',
-    phoneNumber: '+60198765433',
-    email: 'sarah@example.com',
-    carPlate: 'GHI789',
-    status: 'approved',
-    createdAt: '2024-03-17T14:20:00Z',
-    dateSettled: '2024-03-18T11:45:00Z'
-  },
-  {
-    id: '5',
-    customerName: 'David Lee',
-    phoneNumber: '+60123456791',
-    email: 'david@example.com',
-    carPlate: 'JKL012',
-    status: 'rejected',
-    createdAt: '2024-03-16T11:45:00Z',
-    dateSettled: '2024-03-17T16:30:00Z',
-    rejectionReason: 'Warranty expired and customer provided insufficient documentation for claim verification.'
-  },
-  {
-    id: '6',
-    customerName: 'Emily Chen',
-    phoneNumber: '+60198765434',
-    email: 'emily@example.com',
-    carPlate: 'MNO345',
-    status: 'rejected',
-    createdAt: '2024-03-15T16:30:00Z',
-    dateSettled: '2024-03-16T10:15:00Z',
-    rejectionReason: 'Claim was submitted after the warranty period had ended.'
-  }
-];
+// Claims interface and mock data are now imported from claimsApi service
 
 const AllClaims = () => {
-  const [claims, setClaims] = useState<Claim[]>(mockClaims);
+  const [claims, setClaims] = useState<Claim[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>(null);
@@ -127,32 +53,76 @@ const AllClaims = () => {
     email: '',
     carPlate: ''
   });
+  
+  // Loading states
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const { toast } = useToast();
 
-  // TODO: Replace with actual API call when BE is ready
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Create new claim with pending status
-    const newClaim: Claim = {
-      id: Date.now().toString(), // Temporary ID generation
-      ...formData,
-      status: 'pending',
-      createdAt: new Date().toISOString()
-    };
+  // Fetch claims on component mount
+  useEffect(() => {
+    fetchClaims();
+  }, []);
 
-    // Add to claims list
-    setClaims(prevClaims => [newClaim, ...prevClaims]);
+  const fetchClaims = async () => {
+    setIsLoading(true);
+    try {
+      const apiClaims = await claimsApi.getCurrentShopClaims();
+      const frontendClaims = apiClaims.map(convertApiResponseToFrontendClaim);
+      setClaims(frontendClaims);
+    } catch (error) {
+      console.error('Error fetching claims:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to fetch claims',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
     
-    // Reset form and show success
-    setFormData({
-      customerName: '',
-      phoneNumber: '',
-      email: '',
-      carPlate: ''
-    });
-    setIsCreateModalOpen(false);
-    setIsSuccessModalOpen(true);
+    try {
+      // Convert form data to API request format
+      const apiRequest = convertFormDataToCreateClaimRequest(formData);
+      
+      // Create claim via API
+      const apiResponse = await claimsApi.createClaim(apiRequest);
+      
+      // Convert API response to frontend format and add to claims list
+      const newClaim = convertApiResponseToFrontendClaim(apiResponse);
+      setClaims(prevClaims => [newClaim, ...prevClaims]);
+      
+      // Reset form and show success
+      setFormData({
+        customerName: '',
+        phoneNumber: '',
+        email: '',
+        carPlate: ''
+      });
+      setIsCreateModalOpen(false);
+      setIsSuccessModalOpen(true);
+      
+      toast({
+        title: 'Success',
+        description: 'Claim created successfully!',
+      });
+      
+    } catch (error) {
+      console.error('Error creating claim:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to create claim',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -276,164 +246,176 @@ const AllClaims = () => {
             </h3>
           </div>
           
-          {/* Desktop Table View */}
-          <div className="hidden md:block overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-tayaria-darkgray">
-                <TableRow className="hover:bg-transparent border-tayaria-gray">
-                  <TableHead className="text-gray-400">Customer Name</TableHead>
-                  <TableHead className="text-gray-400">Phone No.</TableHead>
-                  <TableHead className="text-gray-400">Email</TableHead>
-                  <TableHead className="text-gray-400">Car Plate</TableHead>
-                  <TableHead 
-                    className="text-gray-400 cursor-pointer select-none hover:text-white transition-colors"
-                    onClick={handleSortToggle}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Created Date</span>
-                      {sortOrder === null && <ArrowUpDown className="h-4 w-4" />}
-                      {sortOrder === 'desc' && <ChevronDown className="h-4 w-4" />}
-                      {sortOrder === 'asc' && <ChevronUp className="h-4 w-4" />}
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-gray-400">Date Settled</TableHead>
-                  <TableHead className="text-gray-400">Date Closed</TableHead>
-                  <TableHead className="text-gray-400">Claim Status</TableHead>
-                  <TableHead className="text-gray-400">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredClaims.length > 0 ? (
-                  filteredClaims.map(claim => (
-                    <TableRow key={claim.id} className="border-tayaria-gray hover:bg-tayaria-darkgray">
-                      <TableCell className="text-white font-medium">{claim.customerName}</TableCell>
-                      <TableCell className="text-white">{claim.phoneNumber}</TableCell>
-                      <TableCell className="text-white">{claim.email}</TableCell>
-                      <TableCell className="text-white font-medium">{claim.carPlate}</TableCell>
-                      <TableCell className="text-white text-sm">{formatDate(claim.createdAt)}</TableCell>
-                      <TableCell className="text-white text-sm">
-                        {claim.dateSettled ? formatDate(claim.dateSettled) : '-'}
-                      </TableCell>
-                      <TableCell className="text-white text-sm">
-                        {claim.dateClosed ? formatDate(claim.dateClosed) : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          claim.status === 'approved' 
-                            ? 'bg-green-500/10 text-green-500' 
-                            : claim.status === 'rejected'
-                            ? 'bg-red-500/10 text-red-500'
-                            : 'bg-yellow-500/10 text-yellow-500'
-                        }`}>
-                          {claim.status.charAt(0).toUpperCase() + claim.status.slice(1)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="space-x-2">
-                        {(claim.status === 'approved' || claim.status === 'rejected') && !claim.dateClosed && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="default"
-                            onClick={() => {
-                              setCloseTargetId(claim.id);
-                              setIsCloseModalOpen(true);
-                            }}
-                            className="bg-tayaria-yellow text-black hover:bg-yellow-400 border border-tayaria-yellow px-2 py-0.5 h-6 min-h-0 text-xs font-semibold rounded transition-colors duration-150"
-                          >
-                            Close
-                          </Button>
-                        )}
-                        {claim.status === 'rejected' && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="default"
-                            onClick={() => {
-                              setSelectedClaim(claim);
-                              setIsRejectionModalOpen(true);
-                            }}
-                            className="bg-gray-200 text-gray-800 hover:bg-gray-300 border border-gray-300 px-2 py-0.5 h-6 min-h-0 text-xs font-semibold rounded transition-colors duration-150"
-                          >
-                            View Reason
-                          </Button>
-                        )}
-                      </TableCell>
+          {/* Loading State */}
+          {isLoading ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-tayaria-yellow" />
+              <span className="ml-2 text-white">Loading claims...</span>
+            </div>
+          ) : (
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-tayaria-darkgray">
+                    <TableRow className="hover:bg-transparent border-tayaria-gray">
+                      <TableHead className="text-gray-400">Customer Name</TableHead>
+                      <TableHead className="text-gray-400">Phone No.</TableHead>
+                      <TableHead className="text-gray-400">Email</TableHead>
+                      <TableHead className="text-gray-400">Car Plate</TableHead>
+                      <TableHead 
+                        className="text-gray-400 cursor-pointer select-none hover:text-white transition-colors"
+                        onClick={handleSortToggle}
+                      >
+                        <div className="flex items-center space-x-1">
+                          <span>Created Date</span>
+                          {sortOrder === null && <ArrowUpDown className="h-4 w-4" />}
+                          {sortOrder === 'desc' && <ChevronDown className="h-4 w-4" />}
+                          {sortOrder === 'asc' && <ChevronUp className="h-4 w-4" />}
+                        </div>
+                      </TableHead>
+                      <TableHead className="text-gray-400">Date Settled</TableHead>
+                      <TableHead className="text-gray-400">Date Closed</TableHead>
+                      <TableHead className="text-gray-400">Claim Status</TableHead>
+                      <TableHead className="text-gray-400">Actions</TableHead>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8">
-                      <p className="text-white">No claims found</p>
-                      <p className="text-gray-400 text-sm">Try adjusting your search criteria</p>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredClaims.length > 0 ? (
+                      filteredClaims.map(claim => (
+                        <TableRow key={claim.id} className="border-tayaria-gray hover:bg-tayaria-darkgray">
+                          <TableCell className="text-white font-medium">{claim.customerName}</TableCell>
+                          <TableCell className="text-white">{claim.phoneNumber}</TableCell>
+                          <TableCell className="text-white">{claim.email}</TableCell>
+                          <TableCell className="text-white font-medium">{claim.carPlate}</TableCell>
+                          <TableCell className="text-white text-sm">{formatDate(claim.createdAt)}</TableCell>
+                          <TableCell className="text-white text-sm">
+                            {claim.dateSettled ? formatDate(claim.dateSettled) : '-'}
+                          </TableCell>
+                          <TableCell className="text-white text-sm">
+                            {claim.dateClosed ? formatDate(claim.dateClosed) : '-'}
+                          </TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              claim.status === 'approved' 
+                                ? 'bg-green-500/10 text-green-500' 
+                                : claim.status === 'rejected'
+                                ? 'bg-red-500/10 text-red-500'
+                                : 'bg-yellow-500/10 text-yellow-500'
+                            }`}>
+                              {claim.status.charAt(0).toUpperCase() + claim.status.slice(1)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="space-x-2">
+                            {(claim.status === 'approved' || claim.status === 'rejected') && !claim.dateClosed && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="default"
+                                onClick={() => {
+                                  setCloseTargetId(claim.id);
+                                  setIsCloseModalOpen(true);
+                                }}
+                                className="bg-tayaria-yellow text-black hover:bg-yellow-400 border border-tayaria-yellow px-2 py-0.5 h-6 min-h-0 text-xs font-semibold rounded transition-colors duration-150"
+                              >
+                                Close
+                              </Button>
+                            )}
+                            {claim.status === 'rejected' && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="default"
+                                onClick={() => {
+                                  setSelectedClaim(claim);
+                                  setIsRejectionModalOpen(true);
+                                }}
+                                className="bg-gray-200 text-gray-800 hover:bg-gray-300 border border-gray-300 px-2 py-0.5 h-6 min-h-0 text-xs font-semibold rounded transition-colors duration-150"
+                              >
+                                View Reason
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center py-8">
+                          <p className="text-white">No claims found</p>
+                          <p className="text-gray-400 text-sm">Try adjusting your search criteria</p>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
 
           {/* Mobile Card View */}
-          <div className="md:hidden divide-y divide-tayaria-gray">
-            {filteredClaims.length > 0 ? (
-              filteredClaims.map(claim => (
-                <div key={claim.id} className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="text-white font-medium">{claim.customerName}</h4>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      claim.status === 'approved' 
-                        ? 'bg-green-500/10 text-green-500' 
-                        : claim.status === 'rejected'
-                        ? 'bg-red-500/10 text-red-500'
-                        : 'bg-yellow-500/10 text-yellow-500'
-                    }`}>
-                      {claim.status.charAt(0).toUpperCase() + claim.status.slice(1)}
-                    </span>
+          {!isLoading && (
+            <div className="md:hidden divide-y divide-tayaria-gray">
+              {filteredClaims.length > 0 ? (
+                filteredClaims.map(claim => (
+                  <div key={claim.id} className="p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="text-white font-medium">{claim.customerName}</h4>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        claim.status === 'approved' 
+                          ? 'bg-green-500/10 text-green-500' 
+                          : claim.status === 'rejected'
+                          ? 'bg-red-500/10 text-red-500'
+                          : 'bg-yellow-500/10 text-yellow-500'
+                      }`}>
+                        {claim.status.charAt(0).toUpperCase() + claim.status.slice(1)}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-gray-400 text-sm">Phone: <span className="text-white">{claim.phoneNumber}</span></p>
+                      <p className="text-gray-400 text-sm">Email: <span className="text-white">{claim.email}</span></p>
+                      <p className="text-gray-400 text-sm">Car Plate: <span className="text-white font-medium">{claim.carPlate}</span></p>
+                      <p className="text-gray-400 text-sm">Created: <span className="text-white">{formatDate(claim.createdAt)}</span></p>
+                      <p className="text-gray-400 text-sm">Settled: <span className="text-white">{claim.dateSettled ? formatDate(claim.dateSettled) : '-'}</span></p>
+                      <p className="text-gray-400 text-sm">Closed: <span className="text-white">{claim.dateClosed ? formatDate(claim.dateClosed) : '-'}</span></p>
+                      {(claim.status === 'approved' || claim.status === 'rejected') && !claim.dateClosed && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="default"
+                          onClick={() => {
+                            setCloseTargetId(claim.id);
+                            setIsCloseModalOpen(true);
+                          }}
+                          className="bg-tayaria-yellow text-black hover:bg-yellow-400 border border-tayaria-yellow px-2 py-0.5 h-6 min-h-0 text-xs font-semibold rounded transition-colors duration-150 mt-1 mr-2"
+                        >
+                          Close
+                        </Button>
+                      )}
+                      {claim.status === 'rejected' && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="default"
+                          onClick={() => {
+                            setSelectedClaim(claim);
+                            setIsRejectionModalOpen(true);
+                          }}
+                          className="bg-gray-200 text-gray-800 hover:bg-gray-300 border border-gray-300 px-2 py-0.5 h-6 min-h-0 text-xs font-semibold rounded transition-colors duration-150 mt-1"
+                        >
+                          View Reason
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-gray-400 text-sm">Phone: <span className="text-white">{claim.phoneNumber}</span></p>
-                    <p className="text-gray-400 text-sm">Email: <span className="text-white">{claim.email}</span></p>
-                    <p className="text-gray-400 text-sm">Car Plate: <span className="text-white font-medium">{claim.carPlate}</span></p>
-                    <p className="text-gray-400 text-sm">Created: <span className="text-white">{formatDate(claim.createdAt)}</span></p>
-                    <p className="text-gray-400 text-sm">Settled: <span className="text-white">{claim.dateSettled ? formatDate(claim.dateSettled) : '-'}</span></p>
-                    <p className="text-gray-400 text-sm">Closed: <span className="text-white">{claim.dateClosed ? formatDate(claim.dateClosed) : '-'}</span></p>
-                    {(claim.status === 'approved' || claim.status === 'rejected') && !claim.dateClosed && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="default"
-                        onClick={() => {
-                          setCloseTargetId(claim.id);
-                          setIsCloseModalOpen(true);
-                        }}
-                        className="bg-tayaria-yellow text-black hover:bg-yellow-400 border border-tayaria-yellow px-2 py-0.5 h-6 min-h-0 text-xs font-semibold rounded transition-colors duration-150 mt-1 mr-2"
-                      >
-                        Close
-                      </Button>
-                    )}
-                    {claim.status === 'rejected' && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="default"
-                        onClick={() => {
-                          setSelectedClaim(claim);
-                          setIsRejectionModalOpen(true);
-                        }}
-                        className="bg-gray-200 text-gray-800 hover:bg-gray-300 border border-gray-300 px-2 py-0.5 h-6 min-h-0 text-xs font-semibold rounded transition-colors duration-150 mt-1"
-                      >
-                        View Reason
-                      </Button>
-                    )}
-                  </div>
+                ))
+              ) : (
+                <div className="p-8 text-center">
+                  <p className="text-white">No claims found</p>
+                  <p className="text-gray-400 text-sm">Try adjusting your search criteria</p>
                 </div>
-              ))
-            ) : (
-              <div className="p-8 text-center">
-                <p className="text-white">No claims found</p>
-                <p className="text-gray-400 text-sm">Try adjusting your search criteria</p>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Create Claim Modal */}
@@ -501,14 +483,17 @@ const AllClaims = () => {
                   variant="outline"
                   onClick={() => setIsCreateModalOpen(false)}
                   className="border-tayaria-gray text-white hover:bg-tayaria-gray"
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   className="bg-green-600 hover:bg-green-700 text-white"
+                  disabled={isSubmitting}
                 >
-                  Create Claim
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isSubmitting ? 'Creating...' : 'Create Claim'}
                 </Button>
               </DialogFooter>
             </form>

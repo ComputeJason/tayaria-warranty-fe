@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MasterLayout from '@/components/master/MasterLayout';
 import MasterHeader from '@/components/master/MasterHeader';
 import { Button } from "@/components/ui/button";
@@ -19,68 +19,25 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Pencil, Trash2, Eye, EyeOff, Search, CheckCircle } from 'lucide-react';
+import { Pencil, Trash2, Eye, EyeOff, Search, CheckCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-
-// TODO: Replace with actual API types when BE is ready
-interface RetailAccount {
-  id: string;
-  shopName: string;
-  address: string;
-  contact: string;
-  username: string;
-  dateCreated: string;
-  status: 'Active' | 'Inactive';
-}
-
-// TODO: Replace with actual data from API when BE is ready
-const initialMockAccounts: RetailAccount[] = [
-  {
-    id: '1',
-    shopName: 'Shop A',
-    address: '123 Main St',
-    contact: '+60123456789',
-    username: 'shopa',
-    dateCreated: '2024-01-01',
-    status: 'Active'
-  },
-  {
-    id: '2',
-    shopName: 'Shop B',
-    address: '456 Oak St',
-    contact: '+60123456790',
-    username: 'shopb',
-    dateCreated: '2024-01-15',
-    status: 'Active'
-  },
-  {
-    id: '3',
-    shopName: 'Tyre Centre C',
-    address: '789 Pine Ave',
-    contact: '+60123456791',
-    username: 'tyrecentrec',
-    dateCreated: '2024-02-01',
-    status: 'Inactive'
-  },
-  {
-    id: '4',
-    shopName: 'Auto Shop D',
-    address: '321 Elm St',
-    contact: '+60123456792',
-    username: 'autoshopd',
-    dateCreated: '2024-02-15',
-    status: 'Active'
-  },
-];
+import { 
+  masterApi, 
+  convertFormDataToApiRequest, 
+  convertApiAccountToFrontend,
+  type FrontendRetailAccount,
+  type FrontendFormData
+} from '@/services/masterApi';
 
 const CreateRetailAccount = () => {
-  const [accounts, setAccounts] = useState<RetailAccount[]>(initialMockAccounts);
-  const [showPassword, setShowPassword] = useState(false);
+  const [accounts, setAccounts] = useState<FrontendRetailAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [passwordVisibility, setPasswordVisibility] = useState<{ [key: string]: boolean }>({});
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FrontendFormData>({
     shopName: '',
     address: '',
     contact: '',
@@ -89,6 +46,29 @@ const CreateRetailAccount = () => {
   });
   const { toast } = useToast();
 
+  // Load accounts on component mount
+  useEffect(() => {
+    loadAccounts();
+  }, []);
+
+  const loadAccounts = async () => {
+    try {
+      setLoading(true);
+      const backendAccounts = await masterApi.getRetailAccounts();
+      const frontendAccounts = backendAccounts.map(convertApiAccountToFrontend);
+      setAccounts(frontendAccounts);
+    } catch (error) {
+      console.error('Failed to load accounts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load retail accounts. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredAccounts = accounts.filter(account => 
     account.shopName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     account.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -96,6 +76,13 @@ const CreateRetailAccount = () => {
     account.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
     account.status.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const togglePasswordVisibility = (accountId: string) => {
+    setPasswordVisibility(prev => ({
+      ...prev,
+      [accountId]: !prev[accountId]
+    }));
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -121,34 +108,15 @@ const CreateRetailAccount = () => {
           description: "Username already exists. Please choose a different username.",
           variant: "destructive",
         });
+        setIsSubmitting(false);
         return;
       }
 
-      // TODO: Replace with actual API call when BE is ready
-      // const response = await fetch('/api/retail-accounts', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formData)
-      // });
-      // if (!response.ok) throw new Error('Failed to create account');
-      // const newAccount = await response.json();
+      const apiRequest = convertFormDataToApiRequest(formData);
+      await masterApi.createRetailAccount(apiRequest);
       
-      // Mock API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Create new account object
-      const newAccount: RetailAccount = {
-        id: Date.now().toString(), // TODO: Replace with actual ID from backend
-        shopName: formData.shopName,
-        address: formData.address,
-        contact: formData.contact,
-        username: formData.username,
-        dateCreated: new Date().toISOString().split('T')[0], // Format: YYYY-MM-DD
-        status: 'Active'
-      };
-
-      // Add to accounts list
-      setAccounts(prevAccounts => [newAccount, ...prevAccounts]);
+      // Reload accounts to show the new one
+      await loadAccounts();
       
       // Reset form and close dialog
       setFormData({
@@ -167,11 +135,23 @@ const CreateRetailAccount = () => {
         description: `Retail account for ${formData.shopName} has been created successfully.`,
       });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create account. Please try again.",
-        variant: "destructive",
-      });
+      console.error('Failed to create account:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create account. Please try again.';
+      
+      // Handle specific error cases
+      if (errorMessage.includes('Username already exists')) {
+        toast({
+          title: "Error",
+          description: "Username already exists. Please choose a different username.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -233,7 +213,7 @@ const CreateRetailAccount = () => {
                   />
                 </div>
                 <div>
-                  <label htmlFor="contact" className="block text-white mb-2">Contact</label>
+                  <label htmlFor="contact" className="block text-white mb-2">Contact (Optional)</label>
                   <Input
                     id="contact"
                     name="contact"
@@ -242,7 +222,6 @@ const CreateRetailAccount = () => {
                     onChange={handleInputChange}
                     className="bg-tayaria-gray text-white border-tayaria-gray"
                     placeholder="+60123456789"
-                    required
                   />
                 </div>
                 <div>
@@ -258,24 +237,15 @@ const CreateRetailAccount = () => {
                 </div>
                 <div>
                   <label htmlFor="password" className="block text-white mb-2">Password</label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      name="password"
-                      type={showPassword ? "text" : "password"}
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      className="bg-tayaria-gray text-white border-tayaria-gray pr-10"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                    >
-                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
-                  </div>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="text"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="bg-tayaria-gray text-white border-tayaria-gray"
+                    required
+                  />
                 </div>
                 <div className="flex justify-end space-x-2">
                   <Button
@@ -291,7 +261,14 @@ const CreateRetailAccount = () => {
                     disabled={isSubmitting}
                     className="bg-tayaria-yellow hover:bg-tayaria-yellow/90 text-black disabled:opacity-50"
                   >
-                    {isSubmitting ? "Creating..." : "Create Account"}
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      "Create Account"
+                    )}
                   </Button>
                 </div>
               </form>
@@ -319,21 +296,45 @@ const CreateRetailAccount = () => {
                 <TableHead className="text-white">Address</TableHead>
                 <TableHead className="text-white">Contact</TableHead>
                 <TableHead className="text-white">Username</TableHead>
+                <TableHead className="text-white">Password</TableHead>
                 <TableHead className="text-white">Date Created</TableHead>
-                <TableHead className="text-white">Status</TableHead>
-                <TableHead className="text-white">Actions</TableHead>
+                {/* <TableHead className="text-white">Status</TableHead> */}
+                {/* <TableHead className="text-white">Actions</TableHead> */}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAccounts.length > 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <div className="flex flex-col items-center space-y-2">
+                      <Loader2 className="h-8 w-8 text-tayaria-yellow animate-spin" />
+                      <p className="text-white">Loading accounts...</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : filteredAccounts.length > 0 ? (
                 filteredAccounts.map((account) => (
                   <TableRow key={account.id}>
                     <TableCell className="text-white">{account.shopName}</TableCell>
                     <TableCell className="text-white">{account.address}</TableCell>
                     <TableCell className="text-white">{account.contact}</TableCell>
                     <TableCell className="text-white">{account.username}</TableCell>
+                    <TableCell className="text-white">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-mono">
+                          {passwordVisibility[account.id] ? account.password : '••••••••'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => togglePasswordVisibility(account.id)}
+                          className="text-gray-400 hover:text-white"
+                        >
+                          {passwordVisibility[account.id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-white">{account.dateCreated}</TableCell>
-                    <TableCell>
+                    {/* <TableCell>
                       <span className={`px-2 py-1 rounded text-xs font-medium ${
                         account.status === 'Active' 
                           ? 'bg-green-500/10 text-green-500' 
@@ -341,8 +342,8 @@ const CreateRetailAccount = () => {
                       }`}>
                         {account.status}
                       </span>
-                    </TableCell>
-                    <TableCell>
+                    </TableCell> */}
+                    {/* <TableCell>
                       <div className="flex space-x-2">
                         <Button
                           variant="ghost"
@@ -369,12 +370,12 @@ const CreateRetailAccount = () => {
                           <Trash2 size={18} />
                         </Button>
                       </div>
-                    </TableCell>
+                    </TableCell> */}
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={6} className="text-center py-8">
                     <p className="text-white">No accounts found</p>
                     <p className="text-gray-400 text-sm">Try adjusting your search criteria</p>
                   </TableCell>
