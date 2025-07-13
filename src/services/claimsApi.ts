@@ -14,43 +14,43 @@ export interface ClaimResponse {
   warranty_id: string;
   shop_id: string;
   status: 'unacknowledged' | 'pending' | 'approved' | 'rejected';
-  rejectionReason: string;
-  dateSettled: string | null;
-  dateClosed: string | null;
-  customerName: string;
-  phoneNumber: string;
+  rejection_reason: string;
+  date_settled: string | null;
+  date_closed: string | null;
+  customer_name: string;
+  phone_number: string;
   email: string;
-  carPlate: string;
-  createdAt: string;
-  updatedAt: string;
+  car_plate: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // Frontend types
 export interface Claim {
   id: string;
-  customerName: string;
-  phoneNumber: string;
+  customer_name: string;
+  phone_number: string;
   email: string;
-  carPlate: string;
+  car_plate: string;
   status: 'unacknowledged' | 'pending' | 'approved' | 'rejected';
-  createdAt: string;
-  dateSettled?: string;
-  rejectionReason?: string;
-  dateClosed?: string;
+  created_at: string;
+  date_settled?: string;
+  rejection_reason?: string;
+  date_closed?: string;
 }
 
 // Helper function to convert frontend form data to backend API format
 export const convertFormDataToCreateClaimRequest = (formData: {
-  customerName: string;
-  phoneNumber: string;
+  customer_name: string;
+  phone_number: string;
   email: string;
-  carPlate: string;
+  car_plate: string;
 }): CreateClaimRequest => {
   return {
-    customer_name: formData.customerName,
-    phone_number: formData.phoneNumber,
+    customer_name: formData.customer_name,
+    phone_number: formData.phone_number,
     email: formData.email || undefined,
-    car_plate: formData.carPlate,
+    car_plate: formData.car_plate,
   };
 };
 
@@ -58,15 +58,15 @@ export const convertFormDataToCreateClaimRequest = (formData: {
 export const convertApiResponseToFrontendClaim = (apiResponse: ClaimResponse): Claim => {
   return {
     id: apiResponse.id,
-    customerName: apiResponse.customerName,
-    phoneNumber: apiResponse.phoneNumber,
+    customer_name: apiResponse.customer_name,
+    phone_number: apiResponse.phone_number,
     email: apiResponse.email,
-    carPlate: apiResponse.carPlate,
+    car_plate: apiResponse.car_plate,
     status: apiResponse.status,
-    createdAt: apiResponse.createdAt,
-    dateSettled: apiResponse.dateSettled || undefined,
-    rejectionReason: apiResponse.rejectionReason || undefined,
-    dateClosed: apiResponse.dateClosed || undefined,
+    created_at: apiResponse.created_at,
+    date_settled: apiResponse.date_settled || undefined,
+    rejection_reason: apiResponse.rejection_reason || undefined,
+    date_closed: apiResponse.date_closed || undefined,
   };
 };
 

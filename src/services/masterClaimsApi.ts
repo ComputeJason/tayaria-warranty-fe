@@ -5,20 +5,21 @@ export interface MasterClaim {
   warranty_id: string | null;
   shop_id: string;
   status: 'unacknowledged' | 'pending' | 'approved' | 'rejected';
-  rejectionReason: string | null;
-  dateSettled: string | null;
-  dateClosed: string | null;
-  customerName: string;
-  phoneNumber: string;
+  rejection_reason: string | null;
+  date_settled: string | null;
+  date_closed: string | null;
+  total_cost: number;
+  customer_name: string;
+  phone_number: string;
   email: string | null;
-  carPlate: string;
-  createdAt: string;
-  updatedAt: string;
+  car_plate: string;
+  created_at: string;
+  updated_at: string;
   // Additional frontend fields
-  shopName: string;
-  shopContact: string;
-  taggedWarrantyId?: string;
-  tyreDetails?: TyreDetail[];
+  shop_name: string;
+  shop_contact: string;
+  tagged_warranty_id?: string;
+  tyre_details?: TyreDetail[];
 }
 
 export interface TyreDetail {
@@ -26,6 +27,24 @@ export interface TyreDetail {
   brand: string;
   size: string;
   cost: number;
+}
+
+export interface Warranty {
+  id: string;
+  name: string;
+  phone_number: string;
+  email: string | null;
+  purchase_date: string;
+  expiry_date: string;
+  car_plate: string;
+  receipt: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DetailedClaimResponse {
+  claim: MasterClaim;
+  warranty: Warranty | null;
 }
 
 class MasterClaimsApi {
@@ -40,12 +59,25 @@ class MasterClaimsApi {
   // Transform API response to include frontend-specific fields
   private transformClaimResponse(claim: any): MasterClaim {
     return {
-      ...claim,
-      // Map warranty_id to taggedWarrantyId if exists
-      taggedWarrantyId: claim.warranty_id || undefined,
-      // TODO: Get shop details from a separate API call or context
-      shopName: claim.shop_name || 'Tayaria Shop', // Use shop_name from API if available
-      shopContact: claim.shop_contact || '+60321234567', // Use shop_contact from API if available
+      id: claim.id,
+      warranty_id: claim.warranty_id,
+      shop_id: claim.shop_id,
+      status: claim.status,
+      rejection_reason: claim.rejection_reason,
+      date_settled: claim.date_settled,
+      date_closed: claim.date_closed,
+      total_cost: claim.total_cost || 0,
+      customer_name: claim.customer_name,
+      phone_number: claim.phone_number,
+      email: claim.email,
+      car_plate: claim.car_plate,
+      created_at: claim.created_at,
+      updated_at: claim.updated_at,
+      // Frontend specific fields
+      shop_name: claim.shop_name || 'Tayaria Shop',
+      shop_contact: claim.shop_contact || '+60321234567',
+      tagged_warranty_id: claim.warranty_id || undefined,
+      tyre_details: claim.tyre_details
     };
   }
 
@@ -74,9 +106,9 @@ class MasterClaimsApi {
     return claims.map(this.transformClaimResponse);
   }
 
-  async getMasterClaimById(claimId: string): Promise<MasterClaim> {
+  async getClaimDetails(claimId: string): Promise<DetailedClaimResponse> {
     if (import.meta.env.DEV) {
-      console.log('🔄 Fetching master claim details:', { claimId });
+      console.log('🔄 Fetching claim details:', { claimId });
     }
 
     const response = await fetch(getApiUrl(`master/claim/${claimId}`), {
@@ -88,12 +120,21 @@ class MasterClaimsApi {
       if (response.status === 404) {
         throw new Error('Claim not found');
       }
+      if (response.status === 401) {
+        throw new Error('Authentication required. Please login again.');
+      }
+      if (response.status === 403) {
+        throw new Error('You do not have permission to view this claim.');
+      }
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || 'Failed to fetch claim details');
     }
 
-    const claim = await response.json();
-    return this.transformClaimResponse(claim);
+    const data = await response.json();
+    return {
+      claim: this.transformClaimResponse(data.claim),
+      warranty: data.warranty
+    };
   }
 }
 

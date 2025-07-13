@@ -50,10 +50,10 @@ const AllClaims = () => {
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
   const [closeTargetId, setCloseTargetId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    customerName: '',
-    phoneNumber: '',
+    customer_name: '',
+    phone_number: '',
     email: '',
-    carPlate: ''
+    car_plate: ''
   });
   
   // Loading states
@@ -120,10 +120,10 @@ const AllClaims = () => {
       
       // Reset form and show success
       setFormData({
-        customerName: '',
-        phoneNumber: '',
+        customer_name: '',
+        phone_number: '',
         email: '',
-        carPlate: ''
+        car_plate: ''
       });
       setIsCreateModalOpen(false);
       setIsSuccessModalOpen(true);
@@ -175,15 +175,15 @@ const AllClaims = () => {
   const filteredClaims = claims
     .filter(claim => {
       const matchesSearch = 
-        claim.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        claim.phoneNumber.includes(searchTerm) ||
+        claim.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        claim.phone_number.includes(searchTerm) ||
         claim.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        claim.carPlate.toLowerCase().includes(searchTerm.toLowerCase());
+        claim.car_plate.toLowerCase().includes(searchTerm.toLowerCase());
       let matchesStatus = false;
       if (statusFilter === 'all') {
         matchesStatus = true;
       } else if (statusFilter === 'open') {
-        matchesStatus = !claim.dateClosed;
+        matchesStatus = !claim.date_closed;
       } else {
         matchesStatus = claim.status === statusFilter;
       }
@@ -191,8 +191,8 @@ const AllClaims = () => {
     })
     .sort((a, b) => {
       if (!sortOrder) return 0;
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
       if (sortOrder === 'desc') {
         return dateB - dateA; // Most recent first
       } else {
@@ -203,7 +203,7 @@ const AllClaims = () => {
   // Handler for closing a claim
   const handleCloseClaim = (id: string) => {
     setClaims(prevClaims => prevClaims.map(claim =>
-      claim.id === id ? { ...claim, dateClosed: new Date().toISOString() } : claim
+      claim.id === id ? { ...claim, date_closed: new Date().toISOString() } : claim
     ));
     setIsCloseModalOpen(false);
     setCloseTargetId(null);
@@ -300,16 +300,16 @@ const AllClaims = () => {
                     {filteredClaims.length > 0 ? (
                       filteredClaims.map(claim => (
                         <TableRow key={claim.id} className="border-tayaria-gray hover:bg-tayaria-darkgray">
-                          <TableCell className="text-white font-medium">{claim.customerName}</TableCell>
-                          <TableCell className="text-white">{claim.phoneNumber}</TableCell>
+                          <TableCell className="text-white font-medium">{claim.customer_name}</TableCell>
+                          <TableCell className="text-white">{claim.phone_number}</TableCell>
                           <TableCell className="text-white">{claim.email}</TableCell>
-                          <TableCell className="text-white font-medium">{claim.carPlate}</TableCell>
-                          <TableCell className="text-white text-sm">{formatDate(claim.createdAt)}</TableCell>
+                          <TableCell className="text-white font-medium">{claim.car_plate}</TableCell>
+                          <TableCell className="text-white text-sm">{formatDate(claim.created_at)}</TableCell>
                           <TableCell className="text-white text-sm">
-                            {claim.dateSettled ? formatDate(claim.dateSettled) : '-'}
+                            {claim.date_settled ? formatDate(claim.date_settled) : '-'}
                           </TableCell>
                           <TableCell className="text-white text-sm">
-                            {claim.dateClosed ? formatDate(claim.dateClosed) : '-'}
+                            {claim.date_closed ? formatDate(claim.date_closed) : '-'}
                           </TableCell>
                           <TableCell>
                             <span className={`px-2 py-1 rounded text-xs font-medium ${
@@ -325,7 +325,7 @@ const AllClaims = () => {
                             </span>
                           </TableCell>
                           <TableCell className="space-x-2">
-                            {(claim.status === 'approved' || claim.status === 'rejected') && !claim.dateClosed && (
+                            {(claim.status === 'approved' || claim.status === 'rejected') && !claim.date_closed && (
                               <Button
                                 type="button"
                                 size="sm"
@@ -377,7 +377,7 @@ const AllClaims = () => {
                 filteredClaims.map(claim => (
                   <div key={claim.id} className="p-4">
                     <div className="flex justify-between items-start mb-2">
-                      <h4 className="text-white font-medium">{claim.customerName}</h4>
+                      <h4 className="text-white font-medium">{claim.customer_name}</h4>
                       <span className={`px-2 py-1 rounded text-xs font-medium ${
                         claim.status === 'approved' 
                           ? 'bg-green-500/10 text-green-500' 
@@ -391,13 +391,13 @@ const AllClaims = () => {
                       </span>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-gray-400 text-sm">Phone: <span className="text-white">{claim.phoneNumber}</span></p>
+                      <p className="text-gray-400 text-sm">Phone: <span className="text-white">{claim.phone_number}</span></p>
                       <p className="text-gray-400 text-sm">Email: <span className="text-white">{claim.email}</span></p>
-                      <p className="text-gray-400 text-sm">Car Plate: <span className="text-white font-medium">{claim.carPlate}</span></p>
-                      <p className="text-gray-400 text-sm">Created: <span className="text-white">{formatDate(claim.createdAt)}</span></p>
-                      <p className="text-gray-400 text-sm">Settled: <span className="text-white">{claim.dateSettled ? formatDate(claim.dateSettled) : '-'}</span></p>
-                      <p className="text-gray-400 text-sm">Closed: <span className="text-white">{claim.dateClosed ? formatDate(claim.dateClosed) : '-'}</span></p>
-                      {(claim.status === 'approved' || claim.status === 'rejected') && !claim.dateClosed && (
+                      <p className="text-gray-400 text-sm">Car Plate: <span className="text-white font-medium">{claim.car_plate}</span></p>
+                      <p className="text-gray-400 text-sm">Created: <span className="text-white">{formatDate(claim.created_at)}</span></p>
+                      <p className="text-gray-400 text-sm">Settled: <span className="text-white">{claim.date_settled ? formatDate(claim.date_settled) : '-'}</span></p>
+                      <p className="text-gray-400 text-sm">Closed: <span className="text-white">{claim.date_closed ? formatDate(claim.date_closed) : '-'}</span></p>
+                      {(claim.status === 'approved' || claim.status === 'rejected') && !claim.date_closed && (
                         <Button
                           type="button"
                           size="sm"
@@ -446,26 +446,26 @@ const AllClaims = () => {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="customerName" className="block text-sm font-medium text-gray-400 mb-1">
+                <label htmlFor="customer_name" className="block text-sm font-medium text-gray-400 mb-1">
                   Customer Name *
                 </label>
                 <Input
-                  id="customerName"
-                  name="customerName"
-                  value={formData.customerName}
+                  id="customer_name"
+                  name="customer_name"
+                  value={formData.customer_name}
                   onChange={handleInputChange}
                   className="bg-tayaria-gray border-tayaria-gray text-white"
                   required
                 />
               </div>
               <div>
-                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-400 mb-1">
+                <label htmlFor="phone_number" className="block text-sm font-medium text-gray-400 mb-1">
                   Phone Number *
                 </label>
                 <Input
-                  id="phoneNumber"
-                  name="phoneNumber"
-                  value={formData.phoneNumber}
+                  id="phone_number"
+                  name="phone_number"
+                  value={formData.phone_number}
                   onChange={handleInputChange}
                   className="bg-tayaria-gray border-tayaria-gray text-white"
                   required
@@ -485,13 +485,13 @@ const AllClaims = () => {
                 />
               </div>
               <div>
-                <label htmlFor="carPlate" className="block text-sm font-medium text-gray-400 mb-1">
+                <label htmlFor="car_plate" className="block text-sm font-medium text-gray-400 mb-1">
                   Car Plate *
                 </label>
                 <Input
-                  id="carPlate"
-                  name="carPlate"
-                  value={formData.carPlate}
+                  id="car_plate"
+                  name="car_plate"
+                  value={formData.car_plate}
                   onChange={handleInputChange}
                   className="bg-tayaria-gray border-tayaria-gray text-white"
                   required
@@ -548,12 +548,12 @@ const AllClaims = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1">Date Settled</label>
-                  <p className="text-white">{formatDate(selectedClaim.dateSettled!)}</p>
+                  <p className="text-white">{formatDate(selectedClaim.date_settled!)}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1">Reason for Rejection</label>
                   <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                    <p className="text-white">{selectedClaim.rejectionReason}</p>
+                    <p className="text-white">{selectedClaim.rejection_reason}</p>
                   </div>
                 </div>
               </div>
