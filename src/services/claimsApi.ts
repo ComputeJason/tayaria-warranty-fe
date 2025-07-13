@@ -1,4 +1,5 @@
-import { getApiUrl } from '@/config/api';
+import { API_BASE_URL } from '@/config';
+import { authApi } from '@/services/authApi';
 
 // Types matching the backend API
 export interface CreateClaimRequest {
@@ -6,7 +7,6 @@ export interface CreateClaimRequest {
   phone_number: string;
   email?: string;
   car_plate: string;
-  shop_id: string;
 }
 
 export interface ClaimResponse {
@@ -25,7 +25,7 @@ export interface ClaimResponse {
   updatedAt: string;
 }
 
-// Frontend types (existing interface from AllClaims.tsx)
+// Frontend types
 export interface Claim {
   id: string;
   customerName: string;
@@ -39,16 +39,6 @@ export interface Claim {
   dateClosed?: string;
 }
 
-// Constants
-const HARDCODED_SHOP_ID = '0b472d1e-888f-4924-9679-3faf77e6420d';
-
-// Helper function to get shop ID (prepared for future configurability)
-export const getShopId = (): string => {
-  // TODO: In future, this could come from localStorage, context, or user session
-  // For now, return hardcoded shop ID
-  return HARDCODED_SHOP_ID;
-};
-
 // Helper function to convert frontend form data to backend API format
 export const convertFormDataToCreateClaimRequest = (formData: {
   customerName: string;
@@ -61,7 +51,6 @@ export const convertFormDataToCreateClaimRequest = (formData: {
     phone_number: formData.phoneNumber,
     email: formData.email || undefined,
     car_plate: formData.carPlate,
-    shop_id: getShopId(),
   };
 };
 
@@ -81,32 +70,23 @@ export const convertApiResponseToFrontendClaim = (apiResponse: ClaimResponse): C
   };
 };
 
-// Helper function to get auth headers (prepared for future authentication)
-const getAuthHeaders = (): Record<string, string> => {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  
-  // TODO: In future, add admin token authentication
-  // const adminToken = localStorage.getItem('adminToken');
-  // if (adminToken) {
-  //   headers['Authorization'] = `Bearer ${adminToken}`;
-  // }
-  
-  return headers;
-};
-
 // API Functions
 export const claimsApi = {
   // Create a new claim
   async createClaim(data: CreateClaimRequest): Promise<ClaimResponse> {
-    const response = await fetch(getApiUrl('user/claim'), {
+    const response = await fetch(`${API_BASE_URL}/api/admin/claim`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: authApi.getAuthHeaders(),
       body: JSON.stringify(data),
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Authentication required. Please login again.');
+      }
+      if (response.status === 403) {
+        throw new Error('You do not have permission to perform this action.');
+      }
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || `Failed to create claim: ${response.status}`);
     }
@@ -114,23 +94,24 @@ export const claimsApi = {
     return response.json();
   },
 
-  // Get all claims for a shop
-  async getShopClaims(shopId: string): Promise<ClaimResponse[]> {
-    const response = await fetch(getApiUrl(`user/claims/${shopId}`), {
+  // Get all claims for the current shop (from JWT)
+  async getCurrentShopClaims(): Promise<ClaimResponse[]> {
+    const response = await fetch(`${API_BASE_URL}/api/admin/claims`, {
       method: 'GET',
-      headers: getAuthHeaders(),
+      headers: authApi.getAuthHeaders(),
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Authentication required. Please login again.');
+      }
+      if (response.status === 403) {
+        throw new Error('You do not have permission to view claims.');
+      }
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || `Failed to fetch claims: ${response.status}`);
     }
 
     return response.json();
-  },
-
-  // Convenience method to get claims for current shop
-  async getCurrentShopClaims(): Promise<ClaimResponse[]> {
-    return this.getShopClaims(getShopId());
   },
 }; 

@@ -1,48 +1,69 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
-interface AdminUser {
+interface Shop {
   id: string;
+  shop_name: string;
+  address: string;
+  contact: string;
   username: string;
-  role: 'admin';
-  token: string;
+  role: "admin" | "master";
+  created_at: string;
+  updated_at: string;
 }
 
-interface MasterUser {
-    id: string;
-    username: string;
-  role: 'master';
-    token: string;
+interface AdminSession {
+  token: string;
+  shop: Shop;
 }
 
 interface AuthContextType {
-  adminSession: AdminUser | null;
-  masterSession: MasterUser | null;
-  setAdminSession: (session: AdminUser | null) => void;
-  setMasterSession: (session: MasterUser | null) => void;
+  adminSession: AdminSession | null;
+  setAdminSession: (session: AdminSession | null) => void;
+  isAuthenticated: boolean;
+  isLoading: boolean;
   signOut: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [adminSession, setAdminSession] = useState<AdminUser | null>(null);
-  const [masterSession, setMasterSession] = useState<MasterUser | null>(null);
+  const [adminSession, setAdminSession] = useState<AdminSession | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // Start with loading true
+
+  // Initialize session from localStorage on mount
+  useEffect(() => {
+    const initializeAuth = async () => {
+      const token = localStorage.getItem('adminToken');
+      const shopData = localStorage.getItem('adminShop');
+      
+      if (token && shopData) {
+        try {
+          const shop = JSON.parse(shopData);
+          setAdminSession({ token, shop });
+        } catch (error) {
+          console.error('Failed to parse admin session:', error);
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminShop');
+        }
+      }
+      setIsLoading(false);
+    };
+
+    initializeAuth();
+  }, []);
 
   const signOut = () => {
     localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminInfo');
-    localStorage.removeItem('masterToken');
-    localStorage.removeItem('masterInfo');
+    localStorage.removeItem('adminShop');
     setAdminSession(null);
-    setMasterSession(null);
   };
 
   return (
     <AuthContext.Provider value={{ 
-      adminSession, 
-      masterSession, 
-      setAdminSession, 
-      setMasterSession,
+      adminSession,
+      setAdminSession,
+      isAuthenticated: !!adminSession?.token,
+      isLoading,
       signOut 
     }}>
       {children}

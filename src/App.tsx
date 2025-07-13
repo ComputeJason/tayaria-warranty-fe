@@ -3,9 +3,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { TyreRegistrationProvider } from "./contexts/TyreRegistrationContext";
 import { AuthProvider } from "./contexts/AuthContext";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import AdminLogin from './pages/AdminLogin';
 import MasterLogin from './pages/MasterLogin';
 import Warranty from "./pages/Warranty";
@@ -39,7 +40,14 @@ const App = () => (
                 <Route path="/master/login" element={<MasterLogin />} />
 
                 {/* Admin routes */}
-                <Route path="/admin/claims" element={<AllClaims />} />
+                <Route
+                  path="/admin/claims"
+                  element={
+                    <ProtectedRoute>
+                      <AllClaims />
+                    </ProtectedRoute>
+                  }
+                />
 
                 {/* Master routes */}
                 <Route path="/master/claims" element={<ManageClaims />} />
@@ -48,7 +56,7 @@ const App = () => (
                 <Route path="/master/create-retail" element={<CreateRetailAccount />} />
 
                 {/* Redirect root to warranty page */}
-                <Route path="/" element={<Warranty />} />
+                <Route path="/" element={<Navigate to="/warranty" replace />} />
 
                 {/* Catch-all route */}
                 <Route path="*" element={<NotFound />} />

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminHeader from '@/components/admin/AdminHeader';
 import { Input } from '@/components/ui/input';
@@ -33,6 +34,7 @@ import {
   convertApiResponseToFrontendClaim,
   type Claim 
 } from '@/services/claimsApi';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Claims interface and mock data are now imported from claimsApi service
 
@@ -59,11 +61,33 @@ const AllClaims = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { toast } = useToast();
-
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
+  
   // Fetch claims on component mount
   useEffect(() => {
     fetchClaims();
   }, []);
+
+  // Handle auth errors
+  const handleAuthError = (error: Error) => {
+    if (error.message.includes('Authentication required') || 
+        error.message.includes('permission')) {
+      toast({
+        title: 'Authentication Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+      signOut();
+      navigate('/admin/login');
+      return;
+    }
+    toast({
+      title: 'Error',
+      description: error.message,
+      variant: 'destructive',
+    });
+  };
 
   const fetchClaims = async () => {
     setIsLoading(true);
@@ -73,11 +97,7 @@ const AllClaims = () => {
       setClaims(frontendClaims);
     } catch (error) {
       console.error('Error fetching claims:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to fetch claims',
-        variant: 'destructive',
-      });
+      handleAuthError(error as Error);
     } finally {
       setIsLoading(false);
     }
@@ -115,11 +135,7 @@ const AllClaims = () => {
       
     } catch (error) {
       console.error('Error creating claim:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to create claim',
-        variant: 'destructive',
-      });
+      handleAuthError(error as Error);
     } finally {
       setIsSubmitting(false);
     }
