@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@/config';
+import { getApiUrl } from '@/config/api';
 import { authApi } from '@/services/authApi';
 
 // Types matching the backend API
@@ -74,7 +74,11 @@ export const convertApiResponseToFrontendClaim = (apiResponse: ClaimResponse): C
 export const claimsApi = {
   // Create a new claim
   async createClaim(data: CreateClaimRequest): Promise<ClaimResponse> {
-    const response = await fetch(`${API_BASE_URL}/api/admin/claim`, {
+    if (import.meta.env.DEV) {
+      console.log('🔄 Creating claim:', { data });
+    }
+
+    const response = await fetch(getApiUrl('admin/claim'), {
       method: 'POST',
       headers: authApi.getAuthHeaders(),
       body: JSON.stringify(data),
@@ -88,15 +92,30 @@ export const claimsApi = {
         throw new Error('You do not have permission to perform this action.');
       }
       const errorData = await response.json().catch(() => ({}));
+      
+      if (import.meta.env.DEV) {
+        console.error('❌ Create claim failed:', { status: response.status, error: errorData });
+      }
+      
       throw new Error(errorData.error || `Failed to create claim: ${response.status}`);
     }
 
-    return response.json();
+    const result = await response.json();
+    
+    if (import.meta.env.DEV) {
+      console.log('✅ Claim created successfully:', result);
+    }
+    
+    return result;
   },
 
   // Get all claims for the current shop (from JWT)
   async getCurrentShopClaims(): Promise<ClaimResponse[]> {
-    const response = await fetch(`${API_BASE_URL}/api/admin/claims`, {
+    if (import.meta.env.DEV) {
+      console.log('🔄 Fetching claims');
+    }
+
+    const response = await fetch(getApiUrl('admin/claims'), {
       method: 'GET',
       headers: authApi.getAuthHeaders(),
     });
@@ -109,9 +128,20 @@ export const claimsApi = {
         throw new Error('You do not have permission to view claims.');
       }
       const errorData = await response.json().catch(() => ({}));
+      
+      if (import.meta.env.DEV) {
+        console.error('❌ Fetch claims failed:', { status: response.status, error: errorData });
+      }
+      
       throw new Error(errorData.error || `Failed to fetch claims: ${response.status}`);
     }
 
-    return response.json();
+    const result = await response.json();
+    
+    if (import.meta.env.DEV) {
+      console.log('✅ Claims fetched successfully:', { count: result.length });
+    }
+    
+    return result;
   },
 }; 
