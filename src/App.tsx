@@ -7,6 +7,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { TyreRegistrationProvider } from "./contexts/TyreRegistrationContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { AuthenticatedRoute } from "./components/auth/AuthenticatedRoute";
+import { AdminRoot } from "./pages/admin/AdminRoot";
 import AdminLogin from './pages/AdminLogin';
 import MasterLogin from './pages/MasterLogin';
 import Warranty from "./pages/Warranty";
@@ -36,10 +38,18 @@ const App = () => (
               <Routes>
                 {/* Public routes */}
                 <Route path="/warranty" element={<Warranty />} />
-                <Route path="/admin/login" element={<AdminLogin />} />
                 <Route path="/master/login" element={<MasterLogin />} />
 
                 {/* Admin routes */}
+                <Route path="/admin" element={<AdminRoot />} />
+                <Route
+                  path="/admin/login"
+                  element={
+                    <AuthenticatedRoute>
+                      <AdminLogin />
+                    </AuthenticatedRoute>
+                  }
+                />
                 <Route
                   path="/admin/claims"
                   element={
