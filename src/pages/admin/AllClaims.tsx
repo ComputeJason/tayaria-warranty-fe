@@ -319,7 +319,9 @@ const AllClaims = () => {
                                 ? 'bg-red-500/10 text-red-500'
                                 : 'bg-yellow-500/10 text-yellow-500'
                             }`}>
-                              {claim.status.charAt(0).toUpperCase() + claim.status.slice(1)}
+                              {claim.status === 'pending' || claim.status === 'unacknowledged' 
+                                ? 'Pending'
+                                : claim.status.charAt(0).toUpperCase() + claim.status.slice(1)}
                             </span>
                           </TableCell>
                           <TableCell className="space-x-2">
@@ -383,7 +385,9 @@ const AllClaims = () => {
                           ? 'bg-red-500/10 text-red-500'
                           : 'bg-yellow-500/10 text-yellow-500'
                       }`}>
-                        {claim.status.charAt(0).toUpperCase() + claim.status.slice(1)}
+                        {claim.status === 'pending' || claim.status === 'unacknowledged' 
+                          ? 'Pending'
+                          : claim.status.charAt(0).toUpperCase() + claim.status.slice(1)}
                       </span>
                     </div>
                     <div className="space-y-1">

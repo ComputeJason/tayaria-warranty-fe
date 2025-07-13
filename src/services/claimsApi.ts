@@ -13,7 +13,7 @@ export interface ClaimResponse {
   id: string;
   warranty_id: string;
   shop_id: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'unacknowledged' | 'pending' | 'approved' | 'rejected';
   rejectionReason: string;
   dateSettled: string | null;
   dateClosed: string | null;
@@ -32,7 +32,7 @@ export interface Claim {
   phoneNumber: string;
   email: string;
   carPlate: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'unacknowledged' | 'pending' | 'approved' | 'rejected';
   createdAt: string;
   dateSettled?: string;
   rejectionReason?: string;
