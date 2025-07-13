@@ -201,12 +201,26 @@ const AllClaims = () => {
     });
 
   // Handler for closing a claim
-  const handleCloseClaim = (id: string) => {
-    setClaims(prevClaims => prevClaims.map(claim =>
-      claim.id === id ? { ...claim, date_closed: new Date().toISOString() } : claim
-    ));
-    setIsCloseModalOpen(false);
-    setCloseTargetId(null);
+  const handleCloseClaim = async (id: string) => {
+    try {
+      const updatedClaim = await claimsApi.closeClaim(id);
+      
+      // Update the claims list with the updated claim
+      setClaims(prevClaims => prevClaims.map(claim =>
+        claim.id === id ? convertApiResponseToFrontendClaim(updatedClaim) : claim
+      ));
+      
+      toast({
+        title: "Success",
+        description: "Claim has been closed successfully.",
+      });
+      
+      setIsCloseModalOpen(false);
+      setCloseTargetId(null);
+    } catch (error) {
+      console.error('Failed to close claim:', error);
+      handleAuthError(error as Error);
+    }
   };
 
   return (

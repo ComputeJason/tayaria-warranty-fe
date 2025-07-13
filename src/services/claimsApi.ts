@@ -144,4 +144,46 @@ export const claimsApi = {
     
     return result;
   },
+
+  // Close a claim
+  async closeClaim(claimId: string): Promise<ClaimResponse> {
+    if (import.meta.env.DEV) {
+      console.log('🔄 Closing claim:', { claimId });
+    }
+
+    const response = await fetch(getApiUrl(`admin/claim/${claimId}/close`), {
+      method: 'POST',
+      headers: authApi.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Authentication required. Please login again.');
+      }
+      if (response.status === 403) {
+        throw new Error('You do not have permission to close this claim.');
+      }
+      if (response.status === 400) {
+        throw new Error('Can only close approved or rejected claims.');
+      }
+      if (response.status === 404) {
+        throw new Error('Claim not found.');
+      }
+      const errorData = await response.json().catch(() => ({}));
+      
+      if (import.meta.env.DEV) {
+        console.error('❌ Close claim failed:', { status: response.status, error: errorData });
+      }
+      
+      throw new Error(errorData.error || `Failed to close claim: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (import.meta.env.DEV) {
+      console.log('✅ Claim closed successfully:', result);
+    }
+    
+    return result;
+  },
 }; 
