@@ -1,44 +1,49 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { authApi } from '@/services/authApi';
+import { Loader2 } from 'lucide-react';
 
 const MasterLogin = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { setMasterSession } = useAuth();
+
+  // Get the page that the user tried to visit
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/master/claims';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Mock successful login response
-      const mockResponse = {
-        id: '1',
-        username: username,
-        role: 'master' as const,
-        token: 'mock-token-' + Date.now()
-      };
-
-      // Store token and master info in localStorage
-      localStorage.setItem('masterToken', mockResponse.token);
-      localStorage.setItem('masterInfo', JSON.stringify(mockResponse));
-      setMasterSession(mockResponse);
+      const response = await authApi.masterLogin({ username, password });
       
-      toast({ title: 'Success', description: 'Logged in as master!' });
-      navigate('/master/claims');
+      // Store token and shop info in localStorage
+      localStorage.setItem('masterToken', response.token);
+      localStorage.setItem('masterShop', JSON.stringify(response.shop));
+      
+      // Update auth context
+      setMasterSession(response);
+      
+      toast({ 
+        title: 'Success', 
+        description: `Welcome back, ${response.shop.shopName}!` 
+      });
+      
+      // Navigate to the page they tried to visit or claims page
+      navigate(from);
     } catch (error) {
       toast({
         title: 'Error',
-        description: (error as Error).message,
+        description: error instanceof Error ? error.message : 'Failed to login',
         variant: 'destructive',
       });
     } finally {
@@ -50,9 +55,6 @@ const MasterLogin = () => {
     <div className="min-h-screen bg-tayaria-black flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md p-6 bg-tayaria-darkgray rounded-lg shadow-lg">
         <h1 className="text-2xl font-bold text-tayaria-yellow mb-6 text-center">Master Login</h1>
-        <p className="text-gray-400 text-sm mb-4 text-center">
-          For demo purposes, any username and password will work
-        </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="username" className="block text-white mb-2">Username</label>
@@ -64,6 +66,7 @@ const MasterLogin = () => {
               placeholder="Enter master username"
               className="bg-tayaria-gray text-white border-tayaria-gray"
               required
+              disabled={loading}
             />
           </div>
           <div>
@@ -76,6 +79,7 @@ const MasterLogin = () => {
               placeholder="Enter password"
               className="bg-tayaria-gray text-white border-tayaria-gray"
               required
+              disabled={loading}
             />
           </div>
           <Button
@@ -83,7 +87,14 @@ const MasterLogin = () => {
             className="w-full bg-tayaria-yellow hover:bg-tayaria-yellow/90 text-black"
             disabled={loading}
           >
-            {loading ? 'Logging in...' : 'Login as Master'}
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Logging in...
+              </>
+            ) : (
+              'Login as Master'
+            )}
           </Button>
         </form>
       </div>

@@ -8,6 +8,7 @@ import { TyreRegistrationProvider } from "./contexts/TyreRegistrationContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AuthenticatedRoute } from "./components/auth/AuthenticatedRoute";
+import { MasterProtectedRoute } from "./components/auth/MasterProtectedRoute";
 import { AdminRoot } from "./pages/admin/AdminRoot";
 import AdminLogin from './pages/AdminLogin';
 import MasterLogin from './pages/MasterLogin';
@@ -38,7 +39,6 @@ const App = () => (
               <Routes>
                 {/* Public routes */}
                 <Route path="/warranty" element={<Warranty />} />
-                <Route path="/master/login" element={<MasterLogin />} />
 
                 {/* Admin routes */}
                 <Route path="/admin" element={<AdminRoot />} />
@@ -60,10 +60,47 @@ const App = () => (
                 />
 
                 {/* Master routes */}
-                <Route path="/master/claims" element={<ManageClaims />} />
-                <Route path="/master/warranties" element={<ManageWarranties />} />
-                <Route path="/master/dashboard" element={<Dashboard />} />
-                <Route path="/master/create-retail" element={<CreateRetailAccount />} />
+                <Route path="/master" element={<Navigate to="/master/claims" replace />} />
+                <Route
+                  path="/master/login"
+                  element={
+                    <AuthenticatedRoute>
+                      <MasterLogin />
+                    </AuthenticatedRoute>
+                  }
+                />
+                <Route
+                  path="/master/claims"
+                  element={
+                    <MasterProtectedRoute>
+                      <ManageClaims />
+                    </MasterProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/master/warranties"
+                  element={
+                    <MasterProtectedRoute>
+                      <ManageWarranties />
+                    </MasterProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/master/dashboard"
+                  element={
+                    <MasterProtectedRoute>
+                      <Dashboard />
+                    </MasterProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/master/create-retail"
+                  element={
+                    <MasterProtectedRoute>
+                      <CreateRetailAccount />
+                    </MasterProtectedRoute>
+                  }
+                />
 
                 {/* Redirect root to warranty page */}
                 <Route path="/" element={<Navigate to="/warranty" replace />} />
