@@ -405,10 +405,13 @@ const ManageClaims = () => {
 
   const filteredClaims = () => {
     return claims.filter(claim => {
+      if (!claim) return false;
+      
+      const searchTermLower = searchTerm.toLowerCase();
       const matchesSearch = 
-        claim.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        claim.phone_number.includes(searchTerm) ||
-        (claim.email?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+        (claim.customer_name?.toLowerCase() || '').includes(searchTermLower) ||
+        (claim.phone_number || '').includes(searchTerm) ||
+        (claim.email?.toLowerCase() || '').includes(searchTermLower);
       
       return matchesSearch;
     });
