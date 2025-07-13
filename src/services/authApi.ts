@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@/config';
+import { getApiUrl } from '@/config/api';
 
 export interface LoginRequest {
   username: string;
@@ -21,14 +21,12 @@ export interface LoginResponse {
 }
 
 class AuthApi {
-  private baseUrl: string;
-
-  constructor() {
-    this.baseUrl = API_BASE_URL || 'http://localhost:8080';
-  }
-
   async adminLogin(request: LoginRequest): Promise<LoginResponse> {
-    const response = await fetch(`${this.baseUrl}/api/admin/login`, {
+    if (import.meta.env.DEV) {
+      console.log('🔄 Admin login attempt:', { username: request.username });
+    }
+
+    const response = await fetch(getApiUrl('admin/login'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -43,14 +41,29 @@ class AuthApi {
       if (response.status === 400) {
         throw new Error('Invalid request');
       }
+      
+      if (import.meta.env.DEV) {
+        console.error('❌ Admin login failed:', { status: response.status });
+      }
+      
       throw new Error('Failed to login');
     }
 
-    return response.json();
+    const result = await response.json();
+    
+    if (import.meta.env.DEV) {
+      console.log('✅ Admin login successful');
+    }
+    
+    return result;
   }
 
   async masterLogin(request: LoginRequest): Promise<LoginResponse> {
-    const response = await fetch(`${this.baseUrl}/api/master/login`, {
+    if (import.meta.env.DEV) {
+      console.log('🔄 Master login attempt:', { username: request.username });
+    }
+
+    const response = await fetch(getApiUrl('master/login'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -65,10 +78,21 @@ class AuthApi {
       if (response.status === 400) {
         throw new Error('Invalid request');
       }
+      
+      if (import.meta.env.DEV) {
+        console.error('❌ Master login failed:', { status: response.status });
+      }
+      
       throw new Error('Failed to login');
     }
 
-    return response.json();
+    const result = await response.json();
+    
+    if (import.meta.env.DEV) {
+      console.log('✅ Master login successful');
+    }
+    
+    return result;
   }
 
   // Helper to get auth headers for protected routes
@@ -86,7 +110,7 @@ class AuthApi {
     if (!token) return false;
 
     try {
-      const response = await fetch(`${this.baseUrl}/api/${role}/validate`, {
+      const response = await fetch(getApiUrl(`${role}/validate`), {
         headers: this.getAuthHeaders(role),
       });
       return response.ok;
