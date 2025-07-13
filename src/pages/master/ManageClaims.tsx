@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import MasterLayout from '@/components/master/MasterLayout';
 import MasterHeader from '@/components/master/MasterHeader';
+import { type DetailedClaimResponse } from '@/services/masterClaimsApi';
 
 // Remove the mock data and interfaces since we're using the ones from masterClaimsApi
 
@@ -47,7 +48,13 @@ const ManageClaims = () => {
   const [selectedClaim, setSelectedClaim] = useState<MasterClaim | null>(null);
   const [selectedWarranty, setSelectedWarranty] = useState<any | null>(null); // Changed type to any as mockWarranties is removed
   const [confirmAction, setConfirmAction] = useState<'accept' | 'reject' | null>(null);
-  const [rejectionReason, setRejectionReason] = useState('');
+  const REJECTION_REASONS = [
+    "Mechanical Failure",
+    "Over Warranty Period",
+    "Not Compliant - No Marking",
+    "Not Compliant - Remaining Tread Depth <6mm"
+  ] as const;
+  const [rejectionReason, setRejectionReason] = useState<typeof REJECTION_REASONS[number]>("Mechanical Failure");
   
   // Tyre details form state
   const [tyreQuantity, setTyreQuantity] = useState<number>(1);
@@ -58,6 +65,8 @@ const ManageClaims = () => {
   // Add this to the state declarations at the top
   const [warranties, setWarranties] = useState<any[]>([]);
   const [loadingWarranties, setLoadingWarranties] = useState(false);
+  const [loadingClaimDetails, setLoadingClaimDetails] = useState(false);
+  const [detailedClaim, setDetailedClaim] = useState<DetailedClaimResponse | null>(null);
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -195,7 +204,7 @@ const ManageClaims = () => {
     setLoadingWarranties(true);
     
     try {
-      const fetchedWarranties = await getWarrantiesByCarPlate(claim.carPlate);
+      const fetchedWarranties = await getWarrantiesByCarPlate(claim.car_plate);
       setWarranties(fetchedWarranties);
     } catch (error) {
       console.error('Failed to fetch warranties:', error);
@@ -253,48 +262,99 @@ const ManageClaims = () => {
   const handleOpenConfirmModal = (claim: MasterClaim, action: 'accept' | 'reject') => {
     setSelectedClaim(claim);
     setConfirmAction(action);
-    setRejectionReason('');
+    setRejectionReason("Mechanical Failure"); // Set default value
     if (action === 'accept') {
       resetTyreForm();
     }
     setIsConfirmModalOpen(true);
   };
 
-  // Handle confirming action
-  const handleConfirmAction = () => {
-    if (selectedClaim && confirmAction) {
-      // Validate rejection reason if rejecting
-      if (confirmAction === 'reject' && !rejectionReason.trim()) {
-        return; // Don't proceed if rejection reason is empty
-      }
+  // Update the handleConfirmAction function to use real APIs
+  const handleConfirmAction = async () => {
+    if (!selectedClaim || !confirmAction) return;
 
-      // Validate tyre details if accepting
-      if (confirmAction === 'accept' && !isTyreDetailsComplete()) {
-        return; // Don't proceed if tyre details are incomplete
-      }
-
-      const newStatus = confirmAction === 'accept' ? 'approved' : 'rejected';
-      const currentDate = new Date().toISOString();
+    try {
+      let response;
       
-      // This function is no longer needed as mockClaims is removed
-      // If BE integration is ready, this will update API
+      if (confirmAction === 'accept') {
+        // Validate tyre details
+        if (!isTyreDetailsComplete()) return;
+
+        // Transform tyre details to match API format
+        const apiTyreDetails = tyreDetails.map(tyre => ({
+          brand: tyre.brand,
+          size: tyre.size,
+          cost: tyre.cost
+        }));
+
+        response = await fetch(getApiUrl(`master/claim/${selectedClaim.id}/accept`), {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('masterToken')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ tyre_details: apiTyreDetails })
+        });
+      } else {
+        // Validate rejection reason
+        if (!REJECTION_REASONS.includes(rejectionReason)) return;
+
+        response = await fetch(getApiUrl(`master/claim/${selectedClaim.id}/reject`), {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('masterToken')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ rejection_reason: rejectionReason })
+        });
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to ${confirmAction} claim: ${response.status}`);
+      }
+
+      await response.json();
+      
+      // Refresh the claims list
+      await fetchClaims(currentTab);
+      
+      // Show success message
       toast({
-        title: 'Feature Not Implemented',
-        description: 'Accepting/rejecting claims is not yet available in the new API.',
-        variant: 'destructive',
+        title: "Success",
+        description: `Claim has been ${confirmAction}ed successfully.`,
       });
+
+      // Reset state
       setIsConfirmModalOpen(false);
       setSelectedClaim(null);
       setConfirmAction(null);
-      setRejectionReason('');
+      setRejectionReason("Mechanical Failure");
       resetTyreForm();
+    } catch (error) {
+      console.error(`Failed to ${confirmAction} claim:`, error);
+      handleAuthError(error as Error);
     }
   };
 
   // Handle opening history detail modal
-  const handleOpenHistoryDetail = (claim: MasterClaim) => {
+  const handleOpenHistoryDetail = async (claim: MasterClaim) => {
+    setLoadingClaimDetails(true);
     setSelectedClaim(claim);
     setIsHistoryDetailModalOpen(true);
+    
+    try {
+      const details = await masterClaimsApi.getClaimDetails(claim.id);
+      setDetailedClaim(details);
+    } catch (error) {
+      console.error('Failed to fetch claim details:', error);
+      handleAuthError(error as Error);
+      // Close the modal if there's an error
+      setIsHistoryDetailModalOpen(false);
+      setSelectedClaim(null);
+    } finally {
+      setLoadingClaimDetails(false);
+    }
   };
 
   // Handle viewing warranty receipt
@@ -346,8 +406,8 @@ const ManageClaims = () => {
   const filteredClaims = () => {
     return claims.filter(claim => {
       const matchesSearch = 
-        claim.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        claim.phoneNumber.includes(searchTerm) ||
+        claim.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        claim.phone_number.includes(searchTerm) ||
         (claim.email?.toLowerCase() || '').includes(searchTerm.toLowerCase());
       
       return matchesSearch;
@@ -388,30 +448,30 @@ const ManageClaims = () => {
                   onClick={tabType === 'history' ? () => handleOpenHistoryDetail(claim) : undefined}
                 >
                   <TableCell className="text-white font-medium">
-                    {tabType === 'history' ? truncateText(claim.customerName, 20) : claim.customerName}
+                    {tabType === 'history' ? truncateText(claim.customer_name, 20) : claim.customer_name}
                   </TableCell>
-                  <TableCell className="text-white">{claim.phoneNumber}</TableCell>
+                  <TableCell className="text-white">{claim.phone_number}</TableCell>
                   <TableCell className="text-white">{claim.email}</TableCell>
-                  <TableCell className="text-white font-medium">{claim.carPlate}</TableCell>
+                  <TableCell className="text-white font-medium">{claim.car_plate}</TableCell>
                   <TableCell className="text-white font-medium">
-                    {tabType === 'history' ? truncateText(claim.shopName, 25) : claim.shopName}
+                    {tabType === 'history' ? truncateText(claim.shop_name, 25) : claim.shop_name}
                   </TableCell>
                   <TableCell className="text-white text-sm">
-                    {claim.shopContact}
+                    {claim.shop_contact}
                   </TableCell>
-                  <TableCell className="text-white text-sm">{formatDate(claim.createdAt)}</TableCell>
+                  <TableCell className="text-white text-sm">{formatDate(claim.created_at)}</TableCell>
                   {tabType === 'history' && (
                     <TableCell className="text-white text-sm">
-                      {claim.dateSettled ? formatDate(claim.dateSettled) : '-'}
+                      {claim.date_settled ? formatDate(claim.date_settled) : '-'}
                     </TableCell>
                   )}
                   {(tabType === 'pending' || tabType === 'history') && (
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      {claim.taggedWarrantyId ? (
+                      {claim.tagged_warranty_id ? (
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleViewWarranty(claim.taggedWarrantyId!)}
+                          onClick={() => handleViewWarranty(claim.tagged_warranty_id!)}
                           className="text-white border-tayaria-gray hover:bg-tayaria-gray"
                         >
                           <Eye className="h-4 w-4 mr-1" />
@@ -448,7 +508,7 @@ const ManageClaims = () => {
                       )}
                       {tabType === 'pending' && (
                         <>
-                          {!claim.taggedWarrantyId ? (
+                          {!claim.tagged_warranty_id ? (
                             <>
                               <Button
                                 size="sm"
@@ -576,7 +636,7 @@ const ManageClaims = () => {
             <div className="max-h-96 overflow-y-auto">
               {selectedClaim && (
                 <div className="mb-4">
-                  <p className="text-gray-400">Car Plate: <span className="text-white font-medium">{selectedClaim.carPlate}</span></p>
+                  <p className="text-gray-400">Car Plate: <span className="text-white font-medium">{selectedClaim.car_plate}</span></p>
                   <p className="text-gray-400">Matching warranties:</p>
                 </div>
               )}
@@ -669,30 +729,30 @@ const ManageClaims = () => {
                     <label className="block text-sm font-medium text-gray-400 mb-1">
                       Customer Name
                     </label>
-                    <p className="text-white">{selectedWarranty.customerName}</p>
+                    <p className="text-white">{selectedWarranty.customer_name}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-400 mb-1">
                       Car Plate
                     </label>
-                    <p className="text-white">{selectedWarranty.carPlate}</p>
+                    <p className="text-white">{selectedWarranty.car_plate}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-400 mb-1">
                       Purchase Date
                     </label>
-                    <p className="text-white">{formatDate(selectedWarranty.purchaseDate)}</p>
+                    <p className="text-white">{formatDate(selectedWarranty.purchase_date)}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-400 mb-1">
                       Expiration Date
                     </label>
-                    <p className="text-white">{formatDate(selectedWarranty.expirationDate)}</p>
+                    <p className="text-white">{formatDate(selectedWarranty.expiry_date)}</p>
                   </div>
                 </div>
                 <div className="pt-4">
                   <Button
-                    onClick={() => handleViewReceipt(selectedWarranty.receiptUrl)}
+                    onClick={() => handleViewReceipt(selectedWarranty.receipt_url)}
                     className="bg-tayaria-yellow text-black hover:bg-tayaria-yellow/90"
                   >
                     <ExternalLink className="h-4 w-4 mr-2" />
@@ -727,9 +787,9 @@ const ManageClaims = () => {
               </p>
               {selectedClaim && (
                 <div className="p-4 bg-tayaria-gray rounded-lg">
-                  <p className="text-white"><strong>Customer:</strong> {selectedClaim.customerName}</p>
-                  <p className="text-white"><strong>Car Plate:</strong> {selectedClaim.carPlate}</p>
-                  <p className="text-white"><strong>Shop:</strong> {selectedClaim.shopName}</p>
+                  <p className="text-white"><strong>Customer:</strong> {selectedClaim.customer_name}</p>
+                  <p className="text-white"><strong>Car Plate:</strong> {selectedClaim.car_plate}</p>
+                  <p className="text-white"><strong>Shop:</strong> {selectedClaim.shop_name}</p>
                 </div>
               )}
               
@@ -817,18 +877,25 @@ const ManageClaims = () => {
                   <label htmlFor="rejectionReason" className="block text-white font-medium mb-2">
                     Reason for Rejection *
                   </label>
-                  <textarea
-                    id="rejectionReason"
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    className="w-full p-3 bg-tayaria-gray border border-tayaria-gray rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tayaria-yellow"
-                    placeholder="Please provide a detailed reason for rejecting this claim..."
-                    rows={4}
-                    required
-                  />
-                  {rejectionReason.trim() === '' && (
-                    <p className="text-red-400 text-sm mt-1">Rejection reason is required</p>
-                  )}
+                  <Select 
+                    value={rejectionReason} 
+                    onValueChange={(value) => setRejectionReason(value as typeof REJECTION_REASONS[number])}
+                  >
+                    <SelectTrigger className="bg-tayaria-gray border-tayaria-gray text-white">
+                      <SelectValue placeholder="Select a reason" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-tayaria-gray border-tayaria-gray">
+                      {REJECTION_REASONS.map((reason) => (
+                        <SelectItem 
+                          key={reason} 
+                          value={reason}
+                          className="text-white hover:bg-tayaria-darkgray"
+                        >
+                          {reason}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
             </div>
@@ -837,7 +904,7 @@ const ManageClaims = () => {
                 variant="outline"
                 onClick={() => {
                   setIsConfirmModalOpen(false);
-                  setRejectionReason('');
+                  setRejectionReason("Mechanical Failure");
                   resetTyreForm();
                 }}
                 className="border-tayaria-gray text-white hover:bg-tayaria-gray"
@@ -847,7 +914,7 @@ const ManageClaims = () => {
               <Button
                 onClick={handleConfirmAction}
                 disabled={
-                  (confirmAction === 'reject' && !rejectionReason.trim()) ||
+                  (confirmAction === 'reject' && !REJECTION_REASONS.includes(rejectionReason)) ||
                   (confirmAction === 'accept' && !isTyreDetailsComplete())
                 }
                 className={`${
@@ -868,150 +935,160 @@ const ManageClaims = () => {
             <DialogHeader>
               <DialogTitle className="text-white">Claim Details</DialogTitle>
             </DialogHeader>
-            {selectedClaim && (
-              <div className="space-y-4">
+            {loadingClaimDetails ? (
+              <div className="flex justify-center items-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-tayaria-yellow" />
+                <span className="ml-2 text-white">Loading claim details...</span>
+              </div>
+            ) : detailedClaim ? (
+              <div className="space-y-6">
                 {/* Claim Information */}
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-2">Claim Information</h3>
-                  <div className="grid grid-cols-2 gap-3">
+                  <h3 className="text-lg font-semibold text-white mb-3">Claim Information</h3>
+                  <div className="grid grid-cols-2 gap-4 p-4 bg-tayaria-gray rounded-lg">
                     <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-0.5">Customer Name</label>
-                      <p className="text-white text-sm">{selectedClaim.customerName}</p>
+                      <label className="block text-sm font-medium text-gray-400 mb-1">Customer Name</label>
+                      <p className="text-white">{detailedClaim.claim.customer_name}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-0.5">Phone Number</label>
-                      <p className="text-white text-sm">{selectedClaim.phoneNumber}</p>
+                      <label className="block text-sm font-medium text-gray-400 mb-1">Phone Number</label>
+                      <p className="text-white">{detailedClaim.claim.phone_number}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-0.5">Email</label>
-                      <p className="text-white text-sm">{selectedClaim.email}</p>
+                      <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                      <p className="text-white">{detailedClaim.claim.email || '-'}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-0.5">Car Plate</label>
-                      <p className="text-white text-sm">{selectedClaim.carPlate}</p>
+                      <label className="block text-sm font-medium text-gray-400 mb-1">Car Plate</label>
+                      <p className="text-white">{detailedClaim.claim.car_plate}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-0.5">Shop Name</label>
-                      <p className="text-white text-sm">{selectedClaim.shopName}</p>
+                      <label className="block text-sm font-medium text-gray-400 mb-1">Shop Name</label>
+                      <p className="text-white">{detailedClaim.claim.shop_name}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-0.5">Shop Contact</label>
-                      <p className="text-white text-sm">{selectedClaim.shopContact}</p>
+                      <label className="block text-sm font-medium text-gray-400 mb-1">Shop Contact</label>
+                      <p className="text-white">{detailedClaim.claim.shop_contact}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-0.5">Created Date</label>
-                      <p className="text-white text-sm">{formatDate(selectedClaim.createdAt)}</p>
+                      <label className="block text-sm font-medium text-gray-400 mb-1">Created Date</label>
+                      <p className="text-white">{formatDate(detailedClaim.claim.created_at)}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-0.5">Date Settled</label>
-                      <p className="text-white text-sm">{selectedClaim.dateSettled ? formatDate(selectedClaim.dateSettled) : '-'}</p>
+                      <label className="block text-sm font-medium text-gray-400 mb-1">Date Settled</label>
+                      <p className="text-white">{detailedClaim.claim.date_settled ? formatDate(detailedClaim.claim.date_settled) : '-'}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-0.5">Status</label>
+                      <label className="block text-sm font-medium text-gray-400 mb-1">Status</label>
                       <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        selectedClaim.status === 'approved' 
+                        detailedClaim.claim.status === 'approved' 
                           ? 'bg-green-500/10 text-green-500' 
                           : 'bg-red-500/10 text-red-500'
                       }`}>
-                        {selectedClaim.status.charAt(0).toUpperCase() + selectedClaim.status.slice(1)}
+                        {detailedClaim.claim.status.charAt(0).toUpperCase() + detailedClaim.claim.status.slice(1)}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Rejection Reason */}
-                {selectedClaim.rejectionReason && (
+                {/* Rejection Reason - Only show if claim was rejected */}
+                {detailedClaim.claim.status === 'rejected' && detailedClaim.claim.rejection_reason && (
                   <div>
-                    <h3 className="text-lg font-semibold text-white mb-2">Rejection Reason</h3>
-                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                      <p className="text-white text-sm">{selectedClaim.rejectionReason}</p>
+                    <h3 className="text-lg font-semibold text-white mb-3">Rejection Details</h3>
+                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                      <label className="block text-sm font-medium text-gray-400 mb-1">Reason for Rejection</label>
+                      <p className="text-white">{detailedClaim.claim.rejection_reason}</p>
                     </div>
                   </div>
                 )}
 
-                {/* Warranty Information */}
-                {selectedClaim.taggedWarrantyId && (
+                {/* Warranty Information - Only show if claim has warranty */}
+                {detailedClaim.warranty && (
                   <div>
-                    <h3 className="text-lg font-semibold text-white mb-2">Tagged Warranty</h3>
-                    {(() => {
-                      const warranty = getWarrantyById(selectedClaim.taggedWarrantyId);
-                      return warranty ? (
-                        <div className="p-3 bg-tayaria-gray rounded-lg">
-                          <div className="grid grid-cols-2 gap-3 mb-3">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-400 mb-0.5">Warranty ID</label>
-                              <p className="text-white text-sm">{warranty.id}</p>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-400 mb-0.5">Customer Name</label>
-                              <p className="text-white text-sm">{warranty.customerName}</p>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-400 mb-0.5">Car Plate</label>
-                              <p className="text-white text-sm">{warranty.carPlate}</p>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-400 mb-0.5">Purchase Date</label>
-                              <p className="text-white text-sm">{formatDate(warranty.purchaseDate)}</p>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-400 mb-0.5">Expiration Date</label>
-                              <p className="text-white text-sm">{formatDate(warranty.expirationDate)}</p>
-                            </div>
-                          </div>
-                          <Button
-                            onClick={() => handleViewReceipt(warranty.receiptUrl)}
-                            className="bg-tayaria-yellow text-black hover:bg-tayaria-yellow/90 text-sm"
-                          >
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            View Warranty Receipt
-                          </Button>
+                    <h3 className="text-lg font-semibold text-white mb-3">Tagged Warranty Information</h3>
+                    <div className="p-4 bg-tayaria-gray rounded-lg space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-400 mb-1">Warranty ID</label>
+                          <p className="text-white">{detailedClaim.warranty.id}</p>
                         </div>
-                      ) : (
-                        <p className="text-gray-400 text-sm">Warranty information not found</p>
-                      );
-                    })()}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-400 mb-1">Customer Name</label>
+                          <p className="text-white">{detailedClaim.warranty.name}</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-400 mb-1">Car Plate</label>
+                          <p className="text-white">{detailedClaim.warranty.car_plate}</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-400 mb-1">Purchase Date</label>
+                          <p className="text-white">{formatDate(detailedClaim.warranty.purchase_date)}</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-400 mb-1">Expiry Date</label>
+                          <p className="text-white">{formatDate(detailedClaim.warranty.expiry_date)}</p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => handleViewReceipt(detailedClaim.warranty.receipt)}
+                        className="bg-tayaria-yellow text-black hover:bg-tayaria-yellow/90"
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        View Warranty Receipt
+                      </Button>
+                    </div>
                   </div>
                 )}
 
-                {/* Tyre Details */}
-                {selectedClaim.tyreDetails && selectedClaim.tyreDetails.length > 0 && (
+                {/* Tyre Details - Only show if claim was approved */}
+                {detailedClaim.claim.status === 'approved' && detailedClaim.claim.tyre_details && detailedClaim.claim.tyre_details.length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold text-white mb-2">Tyre Details</h3>
-                    <div className="space-y-3">
-                      {selectedClaim.tyreDetails.map((tyre, index) => (
-                        <div key={tyre.id} className="p-3 bg-tayaria-gray rounded-lg">
+                    <h3 className="text-lg font-semibold text-white mb-3">Claimed Tyre Details</h3>
+                    <div className="space-y-4">
+                      {detailedClaim.claim.tyre_details.map((tyre, index) => (
+                        <div key={tyre.id} className="p-4 bg-tayaria-gray rounded-lg">
                           <h4 className="text-white font-medium mb-2">Tyre {index + 1}</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div className="grid grid-cols-3 gap-4">
                             <div>
-                              <label className="block text-sm font-medium text-gray-400 mb-0.5">Brand</label>
-                              <p className="text-white text-sm">{tyre.brand}</p>
+                              <label className="block text-sm font-medium text-gray-400 mb-1">Brand</label>
+                              <p className="text-white">{tyre.brand}</p>
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-400 mb-0.5">Size</label>
-                              <p className="text-white text-sm">{tyre.size}</p>
+                              <label className="block text-sm font-medium text-gray-400 mb-1">Size</label>
+                              <p className="text-white">{tyre.size}</p>
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-400 mb-0.5">Cost</label>
-                              <p className="text-white text-sm">RM {tyre.cost.toFixed(2)}</p>
+                              <label className="block text-sm font-medium text-gray-400 mb-1">Cost</label>
+                              <p className="text-white">RM {tyre.cost.toFixed(2)}</p>
                             </div>
                           </div>
                         </div>
                       ))}
-                      <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                        <p className="text-green-400 text-sm font-medium">
-                          Total Cost: RM {selectedClaim.tyreDetails.reduce((sum, tyre) => sum + tyre.cost, 0).toFixed(2)}
-                        </p>
+                      <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400">Total Cost:</span>
+                          <span className="text-green-400 font-medium">
+                            RM {detailedClaim.claim.tyre_details.reduce((total, tyre) => total + tyre.cost, 0).toFixed(2)}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
+            ) : (
+              <div className="py-8 text-center">
+                <p className="text-white">Failed to load claim details</p>
+                <p className="text-gray-400 text-sm">Please try again later</p>
+              </div>
             )}
-            <DialogFooter className="mt-4">
+            <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => setIsHistoryDetailModalOpen(false)}
+                onClick={() => {
+                  setIsHistoryDetailModalOpen(false);
+                  setDetailedClaim(null);
+                }}
                 className="border-tayaria-gray text-white hover:bg-tayaria-gray"
               >
                 Close
