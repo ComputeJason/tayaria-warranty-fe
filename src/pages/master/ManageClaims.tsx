@@ -1,15 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, ExternalLink, Tag, Check, X, Eye } from 'lucide-react';
+import { Search, ExternalLink, Tag, Check, X, Eye, Loader2 } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
+import { masterClaimsApi, type MasterClaim, type TyreDetail } from '@/services/masterClaimsApi';
+import { useAuth } from '@/contexts/AuthContext';
+import { getApiUrl } from '@/config/api';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -19,188 +24,28 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import MasterLayout from '@/components/master/MasterLayout';
 import MasterHeader from '@/components/master/MasterHeader';
 
-// TODO: Replace with actual API types when BE is ready
-interface Claim {
-  id: string;
-  customerName: string;
-  phoneNumber: string;
-  email: string;
-  carPlate: string;
-  shopName: string;
-  shopContact: string;
-  status: 'unacknowledged' | 'pending' | 'approved' | 'rejected';
-  createdAt: string;
-  taggedWarrantyId?: string;
-  dateSettled?: string;
-  rejectionReason?: string;
-  tyreDetails?: TyreDetail[];
-}
-
-interface TyreDetail {
-  id: string;
-  brand: string;
-  size: string;
-  cost: number;
-}
-
-interface Warranty {
-  id: string;
-  customerName: string;
-  carPlate: string;
-  purchaseDate: string;
-  expirationDate: string;
-  receiptUrl: string;
-}
-
-// TODO: Replace with actual API calls when BE is ready
-const mockClaims: Claim[] = [
-  {
-    id: '1',
-    customerName: 'John Doe',
-    phoneNumber: '+60123456789',
-    email: 'john@example.com',
-    carPlate: 'ABC123',
-    shopName: 'Tayaria Main Shop',
-    shopContact: '+60321234567',
-    status: 'unacknowledged',
-    createdAt: '2024-03-20T10:00:00Z'
-  },
-  {
-    id: '2',
-    customerName: 'Ahmad Rahman',
-    phoneNumber: '+60123456791',
-    email: 'ahmad@example.com',
-    carPlate: 'DEF456',
-    shopName: 'Tayaria Branch KL',
-    shopContact: '+60321234568',
-    status: 'unacknowledged',
-    createdAt: '2024-03-20T14:00:00Z'
-  },
-  {
-    id: '3',
-    customerName: 'Jane Smith',
-    phoneNumber: '+60198765432',
-    email: 'jane@example.com',
-    carPlate: 'XYZ789',
-    shopName: 'Tayaria Branch KL',
-    shopContact: '+60321234568',
-    status: 'pending',
-    createdAt: '2024-03-19T15:30:00Z'
-  },
-  {
-    id: '4',
-    customerName: 'Lisa Chen',
-    phoneNumber: '+60123456792',
-    email: 'lisa@example.com',
-    carPlate: 'GHI789',
-    shopName: 'Tayaria Branch Selangor',
-    shopContact: '+60321234569',
-    status: 'pending',
-    createdAt: '2024-03-19T11:00:00Z',
-    taggedWarrantyId: 'W003'
-  },
-  {
-    id: '5',
-    customerName: 'Michael Brown',
-    phoneNumber: '+60123456790',
-    email: 'michael@example.com',
-    carPlate: 'DEF456',
-    shopName: 'Tayaria Branch Selangor',
-    shopContact: '+60321234569',
-    status: 'approved',
-    createdAt: '2024-03-18T09:15:00Z',
-    taggedWarrantyId: 'W002',
-    dateSettled: '2024-03-19T10:30:00Z',
-    tyreDetails: [
-      { id: '1', brand: 'Michelin', size: '205/55R16', cost: 450 },
-      { id: '2', brand: 'Michelin', size: '205/55R16', cost: 450 }
-    ]
-  },
-  {
-    id: '6',
-    customerName: 'Sarah Wilson',
-    phoneNumber: '+60198765433',
-    email: 'sarah@example.com',
-    carPlate: 'JKL012',
-    shopName: 'Tayaria Branch Johor',
-    shopContact: '+60321234570',
-    status: 'rejected',
-    createdAt: '2024-03-17T14:20:00Z',
-    dateSettled: '2024-03-18T16:45:00Z',
-    rejectionReason: 'Warranty expired and customer provided insufficient documentation for claim verification.'
-  }
-];
-
-// TODO: Replace with actual API calls when BE is ready
-const mockWarranties: Warranty[] = [
-  {
-    id: 'W001',
-    customerName: 'John Doe',
-    carPlate: 'ABC123',
-    purchaseDate: '2023-01-15T10:00:00Z',
-    expirationDate: '2025-01-15T10:00:00Z',
-    receiptUrl: '/app_assets/tayaria_sample_receipt.jpg'
-  },
-  {
-    id: 'W002',
-    customerName: 'Michael Brown',
-    carPlate: 'DEF456',
-    purchaseDate: '2023-06-20T14:00:00Z',
-    expirationDate: '2025-06-20T14:00:00Z',
-    receiptUrl: '/app_assets/tayaria_sample_receipt.jpg'
-  },
-  {
-    id: 'W003',
-    customerName: 'Lisa Chen',
-    carPlate: 'GHI789',
-    purchaseDate: '2023-09-10T11:30:00Z',
-    expirationDate: '2025-09-10T11:30:00Z',
-    receiptUrl: '/app_assets/tayaria_sample_receipt.jpg'
-  },
-  {
-    id: 'W004',
-    customerName: 'Jane Smith',
-    carPlate: 'XYZ789',
-    purchaseDate: '2023-03-25T16:45:00Z',
-    expirationDate: '2025-03-25T16:45:00Z',
-    receiptUrl: '/app_assets/tayaria_sample_receipt.jpg'
-  },
-  {
-    id: 'W005',
-    customerName: 'Ahmad Rahman',
-    carPlate: 'DEF456',
-    purchaseDate: '2023-12-05T13:20:00Z',
-    expirationDate: '2025-12-05T13:20:00Z',
-    receiptUrl: '/app_assets/tayaria_sample_receipt.jpg'
-  },
-  {
-    id: 'W006',
-    customerName: 'Jane Smith',
-    carPlate: 'XYZ789',
-    purchaseDate: '2024-01-10T09:15:00Z',
-    expirationDate: '2026-01-10T09:15:00Z',
-    receiptUrl: '/app_assets/tayaria_sample_receipt.jpg'
-  }
-];
+// Remove the mock data and interfaces since we're using the ones from masterClaimsApi
 
 const ManageClaims = () => {
-  const [claims, setClaims] = useState<Claim[]>(mockClaims);
+  const [claims, setClaims] = useState<MasterClaim[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [currentTab, setCurrentTab] = useState<'unacknowledged' | 'pending' | 'history'>('unacknowledged');
   const [searchTerm, setSearchTerm] = useState('');
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [isViewWarrantyModalOpen, setIsViewWarrantyModalOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isHistoryDetailModalOpen, setIsHistoryDetailModalOpen] = useState(false);
-  const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null);
-  const [selectedWarranty, setSelectedWarranty] = useState<Warranty | null>(null);
+  const [selectedClaim, setSelectedClaim] = useState<MasterClaim | null>(null);
+  const [selectedWarranty, setSelectedWarranty] = useState<any | null>(null); // Changed type to any as mockWarranties is removed
   const [confirmAction, setConfirmAction] = useState<'accept' | 'reject' | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   
@@ -209,6 +54,14 @@ const ManageClaims = () => {
   const [tyreDetails, setTyreDetails] = useState<TyreDetail[]>([
     { id: '1', brand: '', size: '', cost: 0 }
   ]);
+
+  // Add this to the state declarations at the top
+  const [warranties, setWarranties] = useState<any[]>([]);
+  const [loadingWarranties, setLoadingWarranties] = useState(false);
+
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
 
   // Format date function
   const formatDate = (dateString: string) => {
@@ -227,43 +80,163 @@ const ManageClaims = () => {
     return text.substring(0, maxLength) + '...';
   };
 
+  // Handle auth errors
+  const handleAuthError = (error: Error) => {
+    if (error.message.includes('Authentication required') || 
+        error.message.includes('permission')) {
+      toast({
+        title: 'Authentication Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+      signOut();
+      navigate('/master/login');
+      return;
+    }
+    toast({
+      title: 'Error',
+      description: error.message,
+      variant: 'destructive',
+    });
+  };
+
+  // Fetch claims based on current tab
+  const fetchClaims = async (status: typeof currentTab) => {
+    setLoading(true);
+    try {
+      const fetchedClaims = await masterClaimsApi.getMasterClaims(status);
+      setClaims(fetchedClaims);
+    } catch (error) {
+      console.error('Failed to fetch claims:', error);
+      handleAuthError(error as Error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch claims when tab changes
+  useEffect(() => {
+    fetchClaims(currentTab);
+  }, [currentTab]);
+
+  const handleTabChange = (value: string) => {
+    setCurrentTab(value as typeof currentTab);
+  };
+
   // Get warranties by car plate
-  const getWarrantiesByCarPlate = (carPlate: string) => {
-    return mockWarranties.filter(warranty => warranty.carPlate === carPlate);
+  const getWarrantiesByCarPlate = async (carPlate: string) => {
+    try {
+      const response = await fetch(getApiUrl(`master/warranties/valid/${encodeURIComponent(carPlate)}`), {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('masterToken')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return []; // No warranties found is a valid state
+        }
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch warranties: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.warranties;
+    } catch (error) {
+      console.error('Failed to fetch warranties:', error);
+      handleAuthError(error as Error);
+      return [];
+    }
   };
 
   // Get warranty by ID
   const getWarrantyById = (warrantyId: string) => {
-    return mockWarranties.find(warranty => warranty.id === warrantyId);
+    // This function is no longer needed as mockWarranties is removed
+    // If BE integration is ready, this will fetch from API
+    return null; 
   };
 
   // Handle moving claim to pending
-  const handleMoveToPending = (claimId: string) => {
-    setClaims(prevClaims => 
-      prevClaims.map(claim => 
-        claim.id === claimId ? { ...claim, status: 'pending' } : claim
-      )
-    );
+  const handleMoveToPending = async (claimId: string) => {
+    try {
+      const response = await fetch(getApiUrl(`master/claim/${claimId}/pending`), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('masterToken')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to move claim to pending: ${response.status}`);
+      }
+
+      await response.json();
+      
+      // Refresh the claims list
+      await fetchClaims(currentTab);
+      
+      toast({
+        title: "Success",
+        description: "Claim has been moved to pending status.",
+      });
+    } catch (error) {
+      console.error('Failed to move claim to pending:', error);
+      handleAuthError(error as Error);
+    }
   };
 
   // Handle opening tag warranty modal
-  const handleOpenTagModal = (claim: Claim) => {
+  const handleOpenTagModal = async (claim: MasterClaim) => {
     setSelectedClaim(claim);
     setIsTagModalOpen(true);
+    setLoadingWarranties(true);
+    
+    try {
+      const fetchedWarranties = await getWarrantiesByCarPlate(claim.carPlate);
+      setWarranties(fetchedWarranties);
+    } catch (error) {
+      console.error('Failed to fetch warranties:', error);
+    } finally {
+      setLoadingWarranties(false);
+    }
   };
 
-  // Handle tagging warranty to claim
-  const handleTagWarranty = (warrantyId: string) => {
-    if (selectedClaim) {
-      setClaims(prevClaims => 
-        prevClaims.map(claim => 
-          claim.id === selectedClaim.id 
-            ? { ...claim, taggedWarrantyId: warrantyId } 
-            : claim
-        )
-      );
+  // Update handleTagWarranty to use the real API
+  const handleTagWarranty = async (warrantyId: string) => {
+    if (!selectedClaim) return;
+
+    try {
+      const response = await fetch(getApiUrl(`master/claim/${selectedClaim.id}/tag-warranty`), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('masterToken')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ warranty_id: warrantyId })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to tag warranty: ${response.status}`);
+      }
+
+      await response.json();
+      
+      // Refresh the claims list and close the modal
+      await fetchClaims(currentTab);
       setIsTagModalOpen(false);
       setSelectedClaim(null);
+      
+      toast({
+        title: "Success",
+        description: "Warranty has been tagged to the claim.",
+      });
+    } catch (error) {
+      console.error('Failed to tag warranty:', error);
+      handleAuthError(error as Error);
     }
   };
 
@@ -277,7 +250,7 @@ const ManageClaims = () => {
   };
 
   // Handle opening confirmation modal
-  const handleOpenConfirmModal = (claim: Claim, action: 'accept' | 'reject') => {
+  const handleOpenConfirmModal = (claim: MasterClaim, action: 'accept' | 'reject') => {
     setSelectedClaim(claim);
     setConfirmAction(action);
     setRejectionReason('');
@@ -303,19 +276,13 @@ const ManageClaims = () => {
       const newStatus = confirmAction === 'accept' ? 'approved' : 'rejected';
       const currentDate = new Date().toISOString();
       
-      setClaims(prevClaims => 
-        prevClaims.map(claim => 
-          claim.id === selectedClaim.id 
-            ? { 
-                ...claim, 
-                status: newStatus, 
-                dateSettled: currentDate,
-                rejectionReason: confirmAction === 'reject' ? rejectionReason : undefined,
-                tyreDetails: confirmAction === 'accept' ? tyreDetails : undefined
-              } 
-            : claim
-        )
-      );
+      // This function is no longer needed as mockClaims is removed
+      // If BE integration is ready, this will update API
+      toast({
+        title: 'Feature Not Implemented',
+        description: 'Accepting/rejecting claims is not yet available in the new API.',
+        variant: 'destructive',
+      });
       setIsConfirmModalOpen(false);
       setSelectedClaim(null);
       setConfirmAction(null);
@@ -325,7 +292,7 @@ const ManageClaims = () => {
   };
 
   // Handle opening history detail modal
-  const handleOpenHistoryDetail = (claim: Claim) => {
+  const handleOpenHistoryDetail = (claim: MasterClaim) => {
     setSelectedClaim(claim);
     setIsHistoryDetailModalOpen(true);
   };
@@ -376,20 +343,18 @@ const ManageClaims = () => {
     setTyreDetails([{ id: '1', brand: '', size: '', cost: 0 }]);
   };
 
-  const filteredClaims = (status: Claim['status'][] | 'all') => {
+  const filteredClaims = () => {
     return claims.filter(claim => {
       const matchesSearch = 
         claim.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         claim.phoneNumber.includes(searchTerm) ||
-        claim.email.toLowerCase().includes(searchTerm.toLowerCase());
+        (claim.email?.toLowerCase() || '').includes(searchTerm.toLowerCase());
       
-      const matchesStatus = status === 'all' || status.includes(claim.status);
-      
-      return matchesSearch && matchesStatus;
+      return matchesSearch;
     });
   };
 
-  const ClaimsTable = ({ claims, tabType }: { claims: Claim[], tabType: 'unacknowledged' | 'pending' | 'history' }) => (
+  const ClaimsTable = ({ claims, tabType }: { claims: MasterClaim[], tabType: 'unacknowledged' | 'pending' | 'history' }) => (
     <div className="tayaria-card p-0 overflow-hidden">
       <div className="overflow-x-auto">
         <Table>
@@ -567,7 +532,7 @@ const ManageClaims = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="unacknowledged" className="space-y-4">
+        <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-4">
           <TabsList className="bg-tayaria-darkgray">
             <TabsTrigger value="unacknowledged" className="data-[state=active]:bg-tayaria-yellow data-[state=active]:text-black">
               Unacknowledged
@@ -580,17 +545,26 @@ const ManageClaims = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="unacknowledged">
-            <ClaimsTable claims={filteredClaims(['unacknowledged'])} tabType="unacknowledged" />
-          </TabsContent>
+          {loading ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-tayaria-yellow" />
+              <span className="ml-2 text-white">Loading claims...</span>
+            </div>
+          ) : (
+            <>
+              <TabsContent value="unacknowledged">
+                <ClaimsTable claims={filteredClaims()} tabType="unacknowledged" />
+              </TabsContent>
 
-          <TabsContent value="pending">
-            <ClaimsTable claims={filteredClaims(['pending'])} tabType="pending" />
-          </TabsContent>
+              <TabsContent value="pending">
+                <ClaimsTable claims={filteredClaims()} tabType="pending" />
+              </TabsContent>
 
-          <TabsContent value="history">
-            <ClaimsTable claims={filteredClaims(['approved', 'rejected'])} tabType="history" />
-          </TabsContent>
+              <TabsContent value="history">
+                <ClaimsTable claims={filteredClaims()} tabType="history" />
+              </TabsContent>
+            </>
+          )}
         </Tabs>
 
         {/* Tag Warranty Modal */}
@@ -616,34 +590,44 @@ const ManageClaims = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {selectedClaim && getWarrantiesByCarPlate(selectedClaim.carPlate).map(warranty => (
-                    <TableRow key={warranty.id} className="border-tayaria-gray hover:bg-tayaria-gray">
-                      <TableCell className="text-white font-medium">{warranty.customerName}</TableCell>
-                      <TableCell className="text-white">{formatDate(warranty.purchaseDate)}</TableCell>
-                      <TableCell className="text-white">{formatDate(warranty.expirationDate)}</TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleViewReceipt(warranty.receiptUrl)}
-                            className="text-white border-tayaria-gray hover:bg-tayaria-darkgray"
-                          >
-                            <ExternalLink className="h-4 w-4 mr-1" />
-                            View Receipt
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleTagWarranty(warranty.id)}
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                          >
-                            Select Warranty
-                          </Button>
+                  {loadingWarranties ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8">
+                        <div className="flex justify-center items-center">
+                          <Loader2 className="h-6 w-6 animate-spin text-tayaria-yellow" />
+                          <span className="ml-2 text-white">Loading warranties...</span>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
-                  {selectedClaim && getWarrantiesByCarPlate(selectedClaim.carPlate).length === 0 && (
+                  ) : warranties.length > 0 ? (
+                    warranties.map(warranty => (
+                      <TableRow key={warranty.id} className="border-tayaria-gray hover:bg-tayaria-gray">
+                        <TableCell className="text-white font-medium">{warranty.name}</TableCell>
+                        <TableCell className="text-white">{formatDate(warranty.purchase_date)}</TableCell>
+                        <TableCell className="text-white">{formatDate(warranty.expiry_date)}</TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleViewReceipt(warranty.receipt)}
+                              className="text-white border-tayaria-gray hover:bg-tayaria-darkgray"
+                            >
+                              <ExternalLink className="h-4 w-4 mr-1" />
+                              View Receipt
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleTagWarranty(warranty.id)}
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              Select Warranty
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center py-8">
                         <p className="text-white">No warranties found for this car plate</p>
