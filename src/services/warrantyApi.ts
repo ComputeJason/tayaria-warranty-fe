@@ -21,6 +21,7 @@ export interface Warranty {
   receipt: string;
   created_at: string;
   updated_at: string;
+  is_used: boolean;
 }
 
 // Helper function to convert frontend form data to backend format
@@ -43,14 +44,18 @@ export const convertApiWarrantyToFrontend = (warranty: Warranty) => {
     registrationDate: warranty.created_at,
     expiryDate: warranty.expiry_date,
     purchaseDate: warranty.purchase_date,
-    status: getWarrantyStatus(warranty.expiry_date),
+    status: getWarrantyStatus(warranty.expiry_date, warranty.is_used),
     tyreDetails: "Tyre details not available", // Backend doesn't provide this yet
     notes: `Customer: ${warranty.name}, Phone: ${warranty.phone_number}`
   };
 };
 
 // Helper function to determine warranty status
-const getWarrantyStatus = (expiryDate: string): 'active' | 'expired' | 'used' => {
+const getWarrantyStatus = (expiryDate: string, isUsed: boolean): 'active' | 'expired' | 'used' => {
+  if (isUsed) {
+    return 'used';
+  }
+  
   const expiry = new Date(expiryDate);
   const now = new Date();
   
