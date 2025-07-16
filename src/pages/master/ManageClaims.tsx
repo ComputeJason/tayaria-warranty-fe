@@ -59,23 +59,99 @@ const ManageClaims = () => {
   // Tyre details form state
   const [tyreQuantity, setTyreQuantity] = useState<number>(1);
   const [tyreDetails, setTyreDetails] = useState<TyreDetail[]>([
-    { id: '1', brand: '', size: '', tread_pattern: '' }
+    { id: '1', brand: 'Pirelli', size: '', tread_pattern: 'Cinturato P7' }
   ]);
 
-  // Tread pattern options
-  const TREAD_PATTERNS = [
-    'Ecowing ES31',
-    'Ecsta PS31',
-    'Ecsta HS52',
-    'Ecsta PS71',
-    'Ecsta PS71 EV',
-    'Ecsta PS71 SUV',
-    'Ecsta Sport PS72',
-    'Ecsta Sport-S PS72-S',
-    'Crugen HP51',
-    'Crugen HP71',
-    'Crugen HP71 EV'
+  // Brand options
+  const BRANDS = [
+    'Pirelli',
+    'GT Radial',
+    'RoadX',
+    'Doublestar',
+    'Kumho'
   ] as const;
+
+  // Brand to tread pattern mapping
+  const BRAND_PATTERNS: Record<string, string[]> = {
+    'Pirelli': [
+      'Cinturato P7',
+      'Cinturato P7 run flat',
+      'Cinturato P7C2',
+      'Cinturato P7C2 run flat',
+      'CInturato P7Blue',
+      'CNT-Rosso',
+      'P7AS',
+      'P Zero',
+      'P Zero run flat',
+      'P Zero PZ4',
+      'P Zero PZ4 run flat',
+      'P Zero Rosso',
+      'P Zero PZ5',
+      'P Zero PZ5 run flat',
+      'Scorpion ATR',
+      'Scorpion AT+',
+      'Scorpion Verde',
+      'Scorpion Verde run flat',
+      'Scorpion Veas',
+      'Scorpion Veas run flat',
+      'Scorpion Zero',
+      'Scorpion Zero All Season (SZROAS)',
+      'Powergy',
+      'P7 Evo',
+      'Dragon Sport'
+    ],
+    'GT Radial': [
+      'GTX pro',
+      'ECOTEC',
+      'FE2',
+      'Sportactive 2',
+      'Bxt pro',
+      'Luxe',
+      'Eco',
+      'Savero suv',
+      'Maxmiler pro'
+    ],
+    'RoadX': [
+      'MX440',
+      'U01',
+      'H/T01',
+      'UX01',
+      'H12',
+      'AT21',
+      'U11',
+      'SU01',
+      'H/T02',
+      'DU71'
+    ],
+    'Doublestar': [
+      'DS602',
+      'DH03',
+      'DU05',
+      'DL01',
+      'DS01',
+      'DSU02',
+      'DU01',
+      'DSS02'
+    ],
+    'Kumho': [
+      'Ecowing ES31',
+      'Ecsta PS31',
+      'Ecsta HS52',
+      'Ecsta PS71',
+      'Ecsta PS71 EV',
+      'Ecsta PS71 SUV',
+      'Ecsta Sport PS72',
+      'Ecsta Sport-S PS72-S',
+      'Crugen HP51',
+      'Crugen HP71',
+      'Crugen HP71 EV'
+    ]
+  };
+
+  // Get tread patterns for a specific brand
+  const getTreadPatternsForBrand = (brand: string): string[] => {
+    return BRAND_PATTERNS[brand] || [];
+  };
 
   // Add this to the state declarations at the top
   const [warranties, setWarranties] = useState<any[]>([]);
@@ -385,9 +461,9 @@ const ManageClaims = () => {
     for (let i = 0; i < quantity; i++) {
       newTyreDetails.push({
         id: (i + 1).toString(),
-        brand: '',
+        brand: 'Pirelli',
         size: '',
-        tread_pattern: ''
+        tread_pattern: 'Cinturato P7'
       });
     }
     setTyreDetails(newTyreDetails);
@@ -415,7 +491,7 @@ const ManageClaims = () => {
   // Reset tyre form
   const resetTyreForm = () => {
     setTyreQuantity(1);
-    setTyreDetails([{ id: '1', brand: '', size: '', tread_pattern: '' }]);
+    setTyreDetails([{ id: '1', brand: 'Pirelli', size: '', tread_pattern: 'Cinturato P7' }]);
   };
 
   const filteredClaims = () => {
@@ -845,12 +921,29 @@ const ManageClaims = () => {
                               <label className="block text-sm font-medium text-gray-400 mb-1">
                                 Brand *
                               </label>
-                              <Input
+                              <Select
                                 value={tyre.brand}
-                                onChange={(e) => handleTyreDetailChange(index, 'brand', e.target.value)}
-                                className="bg-tayaria-darkgray border-tayaria-gray text-white placeholder-gray-400"
-                                placeholder="e.g., Michelin, Bridgestone"
-                              />
+                                onValueChange={(value) => {
+                                  handleTyreDetailChange(index, 'brand', value);
+                                  // If brand changes, update tread pattern to default for the brand
+                                  handleTyreDetailChange(index, 'tread_pattern', getTreadPatternsForBrand(value)[0]);
+                                }}
+                              >
+                                <SelectTrigger className="bg-tayaria-darkgray border-tayaria-gray text-white">
+                                  <SelectValue placeholder="Select brand" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-tayaria-darkgray border-tayaria-gray">
+                                  {BRANDS.map(brand => (
+                                    <SelectItem 
+                                      key={brand} 
+                                      value={brand}
+                                      className="text-white hover:bg-tayaria-darkgray"
+                                    >
+                                      {brand}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </div>
                             <div>
                               <label className="block text-sm font-medium text-gray-400 mb-1">
@@ -859,7 +952,7 @@ const ManageClaims = () => {
                               <Input
                                 value={tyre.size}
                                 onChange={(e) => handleTyreDetailChange(index, 'size', e.target.value)}
-                                className="bg-tayaria-darkgray border-tayaria-gray text-white placeholder-gray-400"
+                                className="bg-black border-tayaria-gray text-white placeholder-gray-400"
                                 placeholder="e.g., 205/55R16"
                               />
                             </div>
@@ -871,11 +964,11 @@ const ManageClaims = () => {
                                 value={tyre.tread_pattern}
                                 onValueChange={(value) => handleTyreDetailChange(index, 'tread_pattern', value)}
                               >
-                                <SelectTrigger className="bg-tayaria-gray border-tayaria-gray text-white">
+                                <SelectTrigger className="bg-black border-tayaria-gray text-white">
                                   <SelectValue placeholder="Select tread pattern" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-tayaria-gray border-tayaria-gray">
-                                  {TREAD_PATTERNS.map(pattern => (
+                                <SelectContent className="bg-black border-tayaria-gray">
+                                  {getTreadPatternsForBrand(tyre.brand).map(pattern => (
                                     <SelectItem 
                                       key={pattern} 
                                       value={pattern}
