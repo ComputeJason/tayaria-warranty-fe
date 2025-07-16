@@ -50,7 +50,7 @@ export const convertFormDataToCreateClaimRequest = (formData: {
     customer_name: formData.customer_name,
     phone_number: formData.phone_number,
     email: formData.email || undefined,
-    car_plate: formData.car_plate,
+    car_plate: formData.car_plate.toUpperCase(),
   };
 };
 

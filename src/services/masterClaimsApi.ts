@@ -8,7 +8,6 @@ export interface MasterClaim {
   rejection_reason: string | null;
   date_settled: string | null;
   date_closed: string | null;
-  total_cost: number;
   customer_name: string;
   phone_number: string;
   email: string | null;
@@ -26,7 +25,7 @@ export interface TyreDetail {
   id: string;
   brand: string;
   size: string;
-  cost: number;
+  tread_pattern: string;
 }
 
 export interface Warranty {
@@ -66,7 +65,6 @@ class MasterClaimsApi {
       rejection_reason: claim.rejection_reason,
       date_settled: claim.date_settled,
       date_closed: claim.date_closed,
-      total_cost: claim.total_cost || 0,
       customer_name: claim.customer_name,
       phone_number: claim.phone_number,
       email: claim.email,

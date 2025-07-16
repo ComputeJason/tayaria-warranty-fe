@@ -59,8 +59,23 @@ const ManageClaims = () => {
   // Tyre details form state
   const [tyreQuantity, setTyreQuantity] = useState<number>(1);
   const [tyreDetails, setTyreDetails] = useState<TyreDetail[]>([
-    { id: '1', brand: '', size: '', cost: 0 }
+    { id: '1', brand: '', size: '', tread_pattern: '' }
   ]);
+
+  // Tread pattern options
+  const TREAD_PATTERNS = [
+    'Ecowing ES31',
+    'Ecsta PS31',
+    'Ecsta HS52',
+    'Ecsta PS71',
+    'Ecsta PS71 EV',
+    'Ecsta PS71 SUV',
+    'Ecsta Sport PS72',
+    'Ecsta Sport-S PS72-S',
+    'Crugen HP51',
+    'Crugen HP71',
+    'Crugen HP71 EV'
+  ] as const;
 
   // Add this to the state declarations at the top
   const [warranties, setWarranties] = useState<any[]>([]);
@@ -284,7 +299,7 @@ const ManageClaims = () => {
         const apiTyreDetails = tyreDetails.map(tyre => ({
           brand: tyre.brand,
           size: tyre.size,
-          cost: tyre.cost
+          tread_pattern: tyre.tread_pattern
         }));
 
         response = await fetch(getApiUrl(`master/claim/${selectedClaim.id}/accept`), {
@@ -372,7 +387,7 @@ const ManageClaims = () => {
         id: (i + 1).toString(),
         brand: '',
         size: '',
-        cost: 0
+        tread_pattern: ''
       });
     }
     setTyreDetails(newTyreDetails);
@@ -393,14 +408,14 @@ const ManageClaims = () => {
     return tyreDetails.every(tyre => 
       tyre.brand.trim() !== '' && 
       tyre.size.trim() !== '' && 
-      tyre.cost > 0
+      tyre.tread_pattern.trim() !== ''
     );
   };
 
   // Reset tyre form
   const resetTyreForm = () => {
     setTyreQuantity(1);
-    setTyreDetails([{ id: '1', brand: '', size: '', cost: 0 }]);
+    setTyreDetails([{ id: '1', brand: '', size: '', tread_pattern: '' }]);
   };
 
   const filteredClaims = () => {
@@ -408,10 +423,13 @@ const ManageClaims = () => {
       if (!claim) return false;
       
       const searchTermLower = searchTerm.toLowerCase();
+      const searchTermUpper = searchTerm.toUpperCase();
       const matchesSearch = 
         (claim.customer_name?.toLowerCase() || '').includes(searchTermLower) ||
         (claim.phone_number || '').includes(searchTerm) ||
-        (claim.email?.toLowerCase() || '').includes(searchTermLower);
+        (claim.email?.toLowerCase() || '').includes(searchTermLower) ||
+        (claim.car_plate?.toUpperCase() || '').includes(searchTermUpper) ||
+        (claim.shop_name?.toLowerCase() || '').includes(searchTermLower);
       
       return matchesSearch;
     });
@@ -587,7 +605,7 @@ const ManageClaims = () => {
           <div className="flex items-center bg-tayaria-darkgray rounded-lg p-2 w-full md:w-[70%]">
             <Search className="h-5 w-5 text-gray-400 mr-2" />
             <Input
-              placeholder="Search claims by name, phone or email"
+              placeholder="Search claims by name, phone, email, car plate or shop name"
               className="border-0 bg-transparent text-white focus-visible:ring-0 placeholder:text-gray-400"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -847,17 +865,27 @@ const ManageClaims = () => {
                             </div>
                             <div>
                               <label className="block text-sm font-medium text-gray-400 mb-1">
-                                Cost (RM) *
+                                Tread Pattern *
                               </label>
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={tyre.cost || ''}
-                                onChange={(e) => handleTyreDetailChange(index, 'cost', parseFloat(e.target.value) || 0)}
-                                className="bg-tayaria-darkgray border-tayaria-gray text-white placeholder-gray-400"
-                                placeholder="0.00"
-                              />
+                              <Select
+                                value={tyre.tread_pattern}
+                                onValueChange={(value) => handleTyreDetailChange(index, 'tread_pattern', value)}
+                              >
+                                <SelectTrigger className="bg-tayaria-gray border-tayaria-gray text-white">
+                                  <SelectValue placeholder="Select tread pattern" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-tayaria-gray border-tayaria-gray">
+                                  {TREAD_PATTERNS.map(pattern => (
+                                    <SelectItem 
+                                      key={pattern} 
+                                      value={pattern}
+                                      className="text-white hover:bg-tayaria-darkgray"
+                                    >
+                                      {pattern}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </div>
                           </div>
                         </div>
@@ -867,7 +895,7 @@ const ManageClaims = () => {
                     {!isTyreDetailsComplete() && (
                       <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
                         <p className="text-red-400 text-sm">
-                          Please fill in all tyre details (brand, size, and cost) for all {tyreQuantity} tyre{tyreQuantity > 1 ? 's' : ''}.
+                          Please fill in all tyre details (brand, size, and tread pattern) for all {tyreQuantity} tyre{tyreQuantity > 1 ? 's' : ''}.
                         </p>
                       </div>
                     )}
@@ -1061,17 +1089,17 @@ const ManageClaims = () => {
                               <p className="text-white">{tyre.size}</p>
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-400 mb-1">Cost</label>
-                              <p className="text-white">RM {tyre.cost.toFixed(2)}</p>
+                              <label className="block text-sm font-medium text-gray-400 mb-1">Tread Pattern</label>
+                              <p className="text-white">{tyre.tread_pattern}</p>
                             </div>
                           </div>
                         </div>
                       ))}
                       <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-400">Total Cost:</span>
+                          <span className="text-gray-400">Total Tyres:</span>
                           <span className="text-green-400 font-medium">
-                            RM {detailedClaim.claim.tyre_details.reduce((total, tyre) => total + tyre.cost, 0).toFixed(2)}
+                            {detailedClaim.claim.tyre_details.length} tyre{detailedClaim.claim.tyre_details.length > 1 ? 's' : ''}
                           </span>
                         </div>
                       </div>

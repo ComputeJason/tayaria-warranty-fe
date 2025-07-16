@@ -31,7 +31,7 @@ export const convertFormDataToApiRequest = (formData: any): CreateWarrantyReques
     phone_number: formData.contactNumber,
     email: formData.email,
     purchase_date: new Date(formData.purchaseDate).toISOString(),
-    car_plate: formData.carPlate,
+    car_plate: formData.carPlate.toUpperCase(),
     receipt: formData.receipt || "https://example.com/receipt.pdf" // Fake URL for now
   };
 };
@@ -90,7 +90,7 @@ export const warrantyApi = {
 
   // Get warranties by car plate
   async getWarrantiesByCarPlate(carPlate: string): Promise<Warranty[]> {
-    const response = await fetch(getApiUrl(`user/warranties/car-plate/${encodeURIComponent(carPlate)}`));
+    const response = await fetch(getApiUrl(`user/warranties/car-plate/${encodeURIComponent(carPlate.toUpperCase())}`));
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));

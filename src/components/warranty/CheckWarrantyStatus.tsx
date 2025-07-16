@@ -77,7 +77,7 @@ export function CheckWarrantyStatus({ initialCarPlate, onNavigateToRegister }: C
     
     try {
       // Call the backend API
-      const apiWarranties = await warrantyApi.getWarrantiesByCarPlate(data.carPlate);
+      const apiWarranties = await warrantyApi.getWarrantiesByCarPlate(data.carPlate.toUpperCase());
       
       // If null or not an array, treat as no warranties found
       if (!Array.isArray(apiWarranties) || apiWarranties.length === 0) {
