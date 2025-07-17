@@ -276,10 +276,21 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
             <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
             <div className="text-sm text-amber-800">
               <p className="font-medium mb-1">Important Notice</p>
-              <p>
+              <p className="mb-3">
                 Your warranty is only valid if the uploaded receipt is clear and includes all required information. 
                 Warranties may be deemed invalid during claims if the receipt lacks essential details.
               </p>
+              
+              <div className="mt-4 pt-3 border-t border-amber-300">
+                <p className="font-bold text-amber-900 mb-2">IMPORTANT WARRANTY TERMS:</p>
+                <div className="space-y-1 text-xs">
+                  <p>1) Valid until 6 months from the date of purchase</p>
+                  <p>2) Valid only if tyre has above 6mm of tread depth left</p>
+                  <p>3) Valid only after a minimum purchase of 2 pcs in single receipt</p>
+                  <p>4) Valid only for digital receipt</p>
+                  <p>5) Invalid for tyre damages that are beyond repair</p>
+                </div>
+              </div>
             </div>
           </div>
 

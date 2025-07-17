@@ -62,12 +62,12 @@ export default function Warranty() {
         
         // Update UI state
         setCarPlate(formData.carPlate || "");
-        setActiveTab("check");
+      setActiveTab("check");
         
-        toast({
-          title: "Success",
-          description: "Warranty registered successfully!",
-        });
+      toast({
+        title: "Success",
+        description: "Warranty registered successfully!",
+      });
       } catch (error) {
         console.error("Error registering warranty:", error);
         toast({

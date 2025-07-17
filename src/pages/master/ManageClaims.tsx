@@ -924,15 +924,22 @@ const ManageClaims = () => {
                               <Select
                                 value={tyre.brand}
                                 onValueChange={(value) => {
-                                  handleTyreDetailChange(index, 'brand', value);
-                                  // If brand changes, update tread pattern to default for the brand
-                                  handleTyreDetailChange(index, 'tread_pattern', getTreadPatternsForBrand(value)[0]);
+                                  const patterns = getTreadPatternsForBrand(value);
+                                  const newTreadPattern = patterns.length > 0 ? patterns[0] : '';
+                                  
+                                  const updatedTyreDetails = [...tyreDetails];
+                                  updatedTyreDetails[index] = {
+                                    ...updatedTyreDetails[index],
+                                    brand: value,
+                                    tread_pattern: newTreadPattern
+                                  };
+                                  setTyreDetails(updatedTyreDetails);
                                 }}
                               >
-                                <SelectTrigger className="bg-tayaria-darkgray border-tayaria-gray text-white">
+                                <SelectTrigger className="bg-black border-tayaria-gray text-white">
                                   <SelectValue placeholder="Select brand" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-tayaria-darkgray border-tayaria-gray">
+                                <SelectContent className="bg-black border-tayaria-gray">
                                   {BRANDS.map(brand => (
                                     <SelectItem 
                                       key={brand} 

@@ -72,8 +72,8 @@ class MasterClaimsApi {
       created_at: claim.created_at,
       updated_at: claim.updated_at,
       // Frontend specific fields
-      shop_name: claim.shop_name || 'Tayaria Shop',
-      shop_contact: claim.shop_contact || '+60321234567',
+      shop_name: claim.shop_name || 'Dummy',
+      shop_contact: claim.contact || 'Dummy Number',
       tagged_warranty_id: claim.warranty_id || undefined,
       tyre_details: claim.tyre_details
     };
