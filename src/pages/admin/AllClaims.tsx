@@ -165,9 +165,7 @@ const AllClaims = () => {
     return new Date(dateString).toLocaleDateString('en-GB', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric'
     });
   };
 
@@ -307,6 +305,7 @@ const AllClaims = () => {
                       <TableHead className="text-gray-400">Date Settled</TableHead>
                       <TableHead className="text-gray-400">Date Closed</TableHead>
                       <TableHead className="text-gray-400">Claim Status</TableHead>
+                      <TableHead className="text-gray-400">Supporting Document</TableHead>
                       <TableHead className="text-gray-400">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -338,35 +337,51 @@ const AllClaims = () => {
                                 : claim.status.charAt(0).toUpperCase() + claim.status.slice(1)}
                             </span>
                           </TableCell>
-                          <TableCell className="space-x-2">
-                            {(claim.status === 'approved' || claim.status === 'rejected') && !claim.date_closed && (
+                          <TableCell className="text-white text-sm">
+                            {claim.status === 'approved' && claim.id === '1' ? (
                               <Button
-                                type="button"
                                 size="sm"
-                                variant="default"
-                                onClick={() => {
-                                  setCloseTargetId(claim.id);
-                                  setIsCloseModalOpen(true);
-                                }}
-                                className="bg-tayaria-yellow text-black hover:bg-yellow-400 border border-tayaria-yellow px-2 py-0.5 h-6 min-h-0 text-xs font-semibold rounded transition-colors duration-150"
+                                variant="outline"
+                                onClick={() => window.open('https://example.com/supporting-document.pdf', '_blank')}
+                                className="text-tayaria-yellow border-tayaria-yellow hover:bg-tayaria-yellow hover:text-black"
                               >
-                                Close
+                                View
                               </Button>
+                            ) : (
+                              '-'
                             )}
-                            {claim.status === 'rejected' && (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="default"
-                                onClick={() => {
-                                  setSelectedClaim(claim);
-                                  setIsRejectionModalOpen(true);
-                                }}
-                                className="bg-gray-200 text-gray-800 hover:bg-gray-300 border border-gray-300 px-2 py-0.5 h-6 min-h-0 text-xs font-semibold rounded transition-colors duration-150"
-                              >
-                                View Reason
-                              </Button>
-                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-nowrap gap-1 min-w-fit">
+                              {(claim.status === 'approved' || claim.status === 'rejected') && !claim.date_closed && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => {
+                                    setCloseTargetId(claim.id);
+                                    setIsCloseModalOpen(true);
+                                  }}
+                                  className="bg-tayaria-yellow text-black hover:bg-yellow-400 border border-tayaria-yellow px-2 py-0.5 h-6 min-h-0 text-xs font-semibold rounded transition-colors duration-150 whitespace-nowrap"
+                                >
+                                  Close
+                                </Button>
+                              )}
+                              {claim.status === 'rejected' && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => {
+                                    setSelectedClaim(claim);
+                                    setIsRejectionModalOpen(true);
+                                  }}
+                                  className="bg-gray-200 text-gray-800 hover:bg-gray-300 border border-gray-300 px-2 py-0.5 h-6 min-h-0 text-xs font-semibold rounded transition-colors duration-150 whitespace-nowrap"
+                                >
+                                  View Reason
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
@@ -411,6 +426,21 @@ const AllClaims = () => {
                       <p className="text-gray-400 text-sm">Created: <span className="text-white">{formatDate(claim.created_at)}</span></p>
                       <p className="text-gray-400 text-sm">Settled: <span className="text-white">{claim.date_settled ? formatDate(claim.date_settled) : '-'}</span></p>
                       <p className="text-gray-400 text-sm">Closed: <span className="text-white">{claim.date_closed ? formatDate(claim.date_closed) : '-'}</span></p>
+                      <p className="text-gray-400 text-sm">
+                        Supporting Document: {' '}
+                        {claim.status === 'approved' && claim.id === '1' ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.open('https://example.com/supporting-document.pdf', '_blank')}
+                            className="text-tayaria-yellow border-tayaria-yellow hover:bg-tayaria-yellow hover:text-black px-2 py-0.5 h-6 min-h-0 text-xs"
+                          >
+                            View
+                          </Button>
+                        ) : (
+                          <span className="text-white">-</span>
+                        )}
+                      </p>
                       {(claim.status === 'approved' || claim.status === 'rejected') && !claim.date_closed && (
                         <Button
                           type="button"

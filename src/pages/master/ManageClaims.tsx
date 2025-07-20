@@ -158,6 +158,13 @@ const ManageClaims = () => {
   const [loadingWarranties, setLoadingWarranties] = useState(false);
   const [loadingClaimDetails, setLoadingClaimDetails] = useState(false);
   const [detailedClaim, setDetailedClaim] = useState<DetailedClaimResponse | null>(null);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [claimDocument, setClaimDocument] = useState<{
+    fileName: string;
+    fileSize: string;
+    uploadDate: string;
+    url: string;
+  } | null>(null);
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -433,10 +440,21 @@ const ManageClaims = () => {
     setLoadingClaimDetails(true);
     setSelectedClaim(claim);
     setIsHistoryDetailModalOpen(true);
+    setClaimDocument(null); // Reset document state for new claim
     
     try {
       const details = await masterClaimsApi.getClaimDetails(claim.id);
       setDetailedClaim(details);
+      
+      // TODO: When backend is ready, check if claim has document and set it
+      // if (details.claim.document_url) {
+      //   setClaimDocument({
+      //     fileName: details.claim.document_name || 'Document',
+      //     fileSize: details.claim.document_size || 'Unknown',
+      //     uploadDate: details.claim.document_upload_date || new Date().toLocaleString(),
+      //     url: details.claim.document_url
+      //   });
+      // }
     } catch (error) {
       console.error('Failed to fetch claim details:', error);
       handleAuthError(error as Error);
@@ -492,6 +510,77 @@ const ManageClaims = () => {
   const resetTyreForm = () => {
     setTyreQuantity(1);
     setTyreDetails([{ id: '1', brand: 'Pirelli', size: '', tread_pattern: 'Cinturato P7' }]);
+  };
+
+  // Handle document upload
+  const handleDocumentUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload a PDF file only.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (1MB = 1024 * 1024 bytes)
+    const maxSize = 1024 * 1024; // 1MB
+    if (file.size > maxSize) {
+      toast({
+        title: "File Too Large",
+        description: "Please upload a file smaller than 1MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadingDocument(true);
+
+    try {
+      // TODO: Replace with actual API call when backend is ready
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Mock successful upload response
+      const mockDocument = {
+        fileName: file.name,
+        fileSize: `${(file.size / 1024).toFixed(1)} KB`,
+        uploadDate: new Date().toLocaleString('en-GB'),
+        url: 'https://example.com/mock-document.pdf' // This will come from backend
+      };
+
+      setClaimDocument(mockDocument);
+      
+      toast({
+        title: "Success",
+        description: "Document uploaded successfully.",
+      });
+
+      // TODO: Refresh claim details to get updated document info
+      // await fetchClaimDetails(selectedClaim!.id);
+    } catch (error) {
+      console.error('Failed to upload document:', error);
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload document. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingDocument(false);
+      // Reset file input
+      event.target.value = '';
+    }
+  };
+
+  // Handle document view
+  const handleViewDocument = () => {
+    if (claimDocument?.url) {
+      window.open(claimDocument.url, '_blank');
+    }
   };
 
   const filteredClaims = () => {
@@ -1122,6 +1211,108 @@ const ManageClaims = () => {
                   </div>
                 </div>
 
+                {/* Claim Document - Only show for approved claims */}
+                {detailedClaim.claim.status === 'approved' && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-3">Claim Document</h3>
+                    <div className="p-4 bg-tayaria-gray rounded-lg space-y-4">
+                      {!claimDocument ? (
+                        <div className="text-center py-6">
+                          <p className="text-gray-400 mb-4">No document uploaded yet</p>
+                          <div className="relative">
+                            <input
+                              type="file"
+                              accept=".pdf"
+                              onChange={handleDocumentUpload}
+                              className="hidden"
+                              id="document-upload"
+                              disabled={uploadingDocument}
+                            />
+                            <label
+                              htmlFor="document-upload"
+                              className={`inline-flex items-center px-4 py-2 rounded-lg cursor-pointer transition-colors ${
+                                uploadingDocument
+                                  ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                                  : 'bg-tayaria-yellow text-black hover:bg-tayaria-yellow/90'
+                              }`}
+                            >
+                              {uploadingDocument ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Uploading...
+                                </>
+                              ) : (
+                                <>
+                                  <ExternalLink className="h-4 w-4 mr-2" />
+                                  Upload PDF Document
+                                </>
+                              )}
+                            </label>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-2">
+                            Maximum file size: 1MB • PDF files only
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3">
+                                <div className="flex-1">
+                                  <p className="text-white font-medium">{claimDocument.fileName}</p>
+                                  <div className="flex items-center space-x-4 text-sm text-gray-400">
+                                    <span>{claimDocument.fileSize}</span>
+                                    <span>•</span>
+                                    <span>Uploaded: {claimDocument.uploadDate}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <Button
+                              onClick={handleViewDocument}
+                              className="bg-tayaria-yellow text-black hover:bg-tayaria-yellow/90"
+                            >
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              View Document
+                            </Button>
+                          </div>
+                          {/* Replace Document Functionality - Commented out for future use
+                          <div className="border-t border-tayaria-darkgray pt-3">
+                            <div className="relative">
+                              <input
+                                type="file"
+                                accept=".pdf"
+                                onChange={handleDocumentUpload}
+                                className="hidden"
+                                id="document-replace"
+                                disabled={uploadingDocument}
+                              />
+                              <label
+                                htmlFor="document-replace"
+                                className={`inline-flex items-center px-3 py-1 rounded text-sm cursor-pointer transition-colors ${
+                                  uploadingDocument
+                                    ? 'text-gray-500 cursor-not-allowed'
+                                    : 'text-tayaria-yellow hover:text-tayaria-yellow/80'
+                                }`}
+                              >
+                                {uploadingDocument ? (
+                                  <>
+                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                    Replacing...
+                                  </>
+                                ) : (
+                                  'Replace Document'
+                                )}
+                              </label>
+                            </div>
+                          </div>
+                          */}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Rejection Reason - Only show if claim was rejected */}
                 {detailedClaim.claim.status === 'rejected' && detailedClaim.claim.rejection_reason && (
                   <div>
@@ -1215,6 +1406,7 @@ const ManageClaims = () => {
                 onClick={() => {
                   setIsHistoryDetailModalOpen(false);
                   setDetailedClaim(null);
+                  setClaimDocument(null); // Reset document state on modal close
                 }}
                 className="border-tayaria-gray text-white hover:bg-tayaria-gray"
               >
