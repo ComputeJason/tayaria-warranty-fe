@@ -1140,10 +1140,6 @@ const ManageClaims = () => {
                     <div className="p-4 bg-tayaria-gray rounded-lg space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-400 mb-1">Warranty ID</label>
-                          <p className="text-white">{detailedClaim.warranty.id}</p>
-                        </div>
-                        <div>
                           <label className="block text-sm font-medium text-gray-400 mb-1">Customer Name</label>
                           <p className="text-white">{detailedClaim.warranty.name}</p>
                         </div>
