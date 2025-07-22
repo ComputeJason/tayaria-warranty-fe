@@ -19,6 +19,7 @@ export interface MasterClaim {
   shop_contact: string;
   tagged_warranty_id?: string;
   tyre_details?: TyreDetail[];
+  supporting_doc_url?: string;
 }
 
 export interface TyreDetail {
@@ -75,7 +76,8 @@ class MasterClaimsApi {
       shop_name: claim.shop_name || 'Dummy',
       shop_contact: claim.contact || 'Dummy Number',
       tagged_warranty_id: claim.warranty_id || undefined,
-      tyre_details: claim.tyre_details
+      tyre_details: claim.tyre_details,
+      supporting_doc_url: claim.supporting_doc_url
     };
   }
 

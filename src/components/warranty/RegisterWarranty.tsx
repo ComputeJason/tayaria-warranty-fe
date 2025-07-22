@@ -25,7 +25,7 @@ import { isAfter, isBefore, subDays, startOfDay, parseISO } from 'date-fns';
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   contactNumber: z.string().regex(/^[0-9]{8,}$/, "Please enter a valid phone number"),
-  email: z.string().email("Please enter a valid email"),
+  email: z.string().email("Please enter a valid email").optional().or(z.literal("")),
   purchaseDate: z.string().min(1, "Purchase date is required"),
   carPlate: z.string().min(1, "Car plate is required"),
   receipt: z.string().min(1, "Receipt upload is required"),
@@ -213,9 +213,9 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>Email (Optional)</FormLabel>
               <FormControl>
-                <Input placeholder="Enter your email" type="email" {...field} className="bg-white text-black" />
+                <Input placeholder="Enter your email (optional)" type="email" {...field} className="bg-white text-black" />
               </FormControl>
               <FormMessage />
             </FormItem>

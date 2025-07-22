@@ -35,6 +35,7 @@ import {
   type Claim 
 } from '@/services/claimsApi';
 import { useAuth } from '@/contexts/AuthContext';
+import { getApiUrl } from '@/config/api';
 
 // Claims interface and mock data are now imported from claimsApi service
 
@@ -203,10 +204,18 @@ const AllClaims = () => {
     try {
       const updatedClaim = await claimsApi.closeClaim(id);
       
-      // Update the claims list with the updated claim
-      setClaims(prevClaims => prevClaims.map(claim =>
-        claim.id === id ? convertApiResponseToFrontendClaim(updatedClaim) : claim
-      ));
+      // Update the claims list with the updated claim, preserving supporting_doc_url
+      setClaims(prevClaims => prevClaims.map(claim => {
+        if (claim.id === id) {
+          const convertedClaim = convertApiResponseToFrontendClaim(updatedClaim);
+          // Preserve the existing supporting_doc_url if the API response doesn't include it
+          return {
+            ...convertedClaim,
+            supporting_doc_url: convertedClaim.supporting_doc_url || claim.supporting_doc_url
+          };
+        }
+        return claim;
+      }));
       
       toast({
         title: "Success",
@@ -218,6 +227,46 @@ const AllClaims = () => {
     } catch (error) {
       console.error('Failed to close claim:', error);
       handleAuthError(error as Error);
+    }
+  };
+
+  // Handler for viewing supporting document
+  const handleViewSupportingDocument = async (claimId: string) => {
+    try {
+      // Fetch the pre-signed URL from the API
+      const response = await fetch(getApiUrl(`user/claim/${claimId}/supporting-doc`));
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch document URL: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Open the document in a new tab
+      window.open(data.supporting_doc_url, '_blank');
+    } catch (error) {
+      console.error('Failed to fetch document URL:', error);
+      
+      // Show specific error messages based on API response
+      let errorMessage = "Failed to fetch document. Please try again.";
+      if (error instanceof Error) {
+        if (error.message.includes("No supporting document found")) {
+          errorMessage = "No supporting document found for this claim.";
+        } else if (error.message.includes("Claim not found")) {
+          errorMessage = "Claim not found.";
+        } else if (error.message.includes("Failed to generate pre-signed URL")) {
+          errorMessage = "Failed to generate document URL. Please try again.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
     }
   };
 
@@ -338,18 +387,17 @@ const AllClaims = () => {
                             </span>
                           </TableCell>
                           <TableCell className="text-white text-sm">
-                            {claim.status === 'approved' && claim.id === '1' ? (
+                            {claim.supporting_doc_url && (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => window.open('https://example.com/supporting-document.pdf', '_blank')}
+                                onClick={() => handleViewSupportingDocument(claim.id)}
                                 className="text-tayaria-yellow border-tayaria-yellow hover:bg-tayaria-yellow hover:text-black"
                               >
                                 View
                               </Button>
-                            ) : (
-                              '-'
                             )}
+                            {!claim.supporting_doc_url && '-'}
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-nowrap gap-1 min-w-fit">
@@ -428,18 +476,17 @@ const AllClaims = () => {
                       <p className="text-gray-400 text-sm">Closed: <span className="text-white">{claim.date_closed ? formatDate(claim.date_closed) : '-'}</span></p>
                       <p className="text-gray-400 text-sm">
                         Supporting Document: {' '}
-                        {claim.status === 'approved' && claim.id === '1' ? (
+                        {claim.supporting_doc_url && (
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => window.open('https://example.com/supporting-document.pdf', '_blank')}
+                            onClick={() => handleViewSupportingDocument(claim.id)}
                             className="text-tayaria-yellow border-tayaria-yellow hover:bg-tayaria-yellow hover:text-black px-2 py-0.5 h-6 min-h-0 text-xs"
                           >
                             View
                           </Button>
-                        ) : (
-                          <span className="text-white">-</span>
                         )}
+                        {!claim.supporting_doc_url && <span className="text-white">-</span>}
                       </p>
                       {(claim.status === 'approved' || claim.status === 'rejected') && !claim.date_closed && (
                         <Button

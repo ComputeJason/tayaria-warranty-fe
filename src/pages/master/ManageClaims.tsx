@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { masterClaimsApi, type MasterClaim, type TyreDetail } from '@/services/masterClaimsApi';
+import { warrantyApi } from '@/services/warrantyApi';
 import { useAuth } from '@/contexts/AuthContext';
 import { getApiUrl } from '@/config/api';
 import {
@@ -165,6 +166,7 @@ const ManageClaims = () => {
     uploadDate: string;
     url: string;
   } | null>(null);
+  const [loadingReceipt, setLoadingReceipt] = useState(false);
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -348,11 +350,47 @@ const ManageClaims = () => {
   };
 
   // Handle opening view warranty modal
-  const handleViewWarranty = (warrantyId: string) => {
-    const warranty = getWarrantyById(warrantyId);
-    if (warranty) {
-      setSelectedWarranty(warranty);
+  const handleViewWarranty = async (warrantyId: string) => {
+    setLoadingReceipt(true);
+    try {
+      let warranty = getWarrantyById(warrantyId);
+      if (!warranty) {
+        toast({
+          title: "Warranty Not Found",
+          description: "Could not find warranty in memory. Trying to fetch from backend...",
+          variant: "destructive",
+        });
+        // Try to fetch from backend
+        const warranties = await warrantyApi.getWarrantiesByCarPlate(selectedClaim?.car_plate || '');
+        warranty = warranties.find(w => w.id === warrantyId);
+        if (!warranty) {
+          toast({
+            title: "Warranty Not Found",
+            description: "Could not find warranty with this ID.",
+            variant: "destructive",
+          });
+          setLoadingReceipt(false);
+          return;
+        }
+      }
+      // Fetch the receipt URL
+      const receiptResponse = await warrantyApi.getReceiptUrl(warrantyId);
+      const warrantyWithReceipt = {
+        ...warranty,
+        receipt_url: receiptResponse.receipt_url
+      };
+      setSelectedWarranty(warrantyWithReceipt);
+      console.log('Opening warranty modal for:', warrantyWithReceipt);
       setIsViewWarrantyModalOpen(true);
+    } catch (error) {
+      console.error('Failed to fetch warranty details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch warranty details. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingReceipt(false);
     }
   };
 
@@ -446,15 +484,15 @@ const ManageClaims = () => {
       const details = await masterClaimsApi.getClaimDetails(claim.id);
       setDetailedClaim(details);
       
-      // TODO: When backend is ready, check if claim has document and set it
-      // if (details.claim.document_url) {
-      //   setClaimDocument({
-      //     fileName: details.claim.document_name || 'Document',
-      //     fileSize: details.claim.document_size || 'Unknown',
-      //     uploadDate: details.claim.document_upload_date || new Date().toLocaleString(),
-      //     url: details.claim.document_url
-      //   });
-      // }
+      // Check if claim has supporting document and set it
+      if (details.claim.supporting_doc_url) {
+        setClaimDocument({
+          fileName: 'Supporting Document',
+          fileSize: '',
+          uploadDate: '',
+          url: details.claim.supporting_doc_url // This will be used to check if document exists
+        });
+      }
     } catch (error) {
       console.error('Failed to fetch claim details:', error);
       handleAuthError(error as Error);
@@ -467,9 +505,21 @@ const ManageClaims = () => {
   };
 
   // Handle viewing warranty receipt
-  const handleViewReceipt = (receiptUrl: string) => {
-    // TODO: Replace with dynamic URL when BE is ready
-    window.open(receiptUrl, '_blank');
+  const handleViewReceipt = async (warrantyId: string) => {
+    setLoadingReceipt(true);
+    try {
+      const response = await warrantyApi.getReceiptUrl(warrantyId);
+      window.open(response.receipt_url, '_blank');
+    } catch (error) {
+      console.error('Failed to fetch receipt URL:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch receipt URL. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingReceipt(false);
+    }
   };
 
   // Handle tyre quantity change
@@ -541,16 +591,32 @@ const ManageClaims = () => {
     setUploadingDocument(true);
 
     try {
-      // TODO: Replace with actual API call when backend is ready
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('file', file);
 
-      // Mock successful upload response
+      // Upload document to API
+      const response = await fetch(getApiUrl(`master/claim/${selectedClaim!.id}/supporting-doc`), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('masterToken')}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to upload document: ${response.status}`);
+      }
+
+      const updatedClaim = await response.json();
+
+      // Update document state with simplified info
       const mockDocument = {
-        fileName: file.name,
-        fileSize: `${(file.size / 1024).toFixed(1)} KB`,
-        uploadDate: new Date().toLocaleString('en-GB'),
-        url: 'https://example.com/mock-document.pdf' // This will come from backend
+        fileName: 'Supporting Document',
+        fileSize: '',
+        uploadDate: '',
+        url: '' // Will be fetched when user clicks "View Document"
       };
 
       setClaimDocument(mockDocument);
@@ -560,13 +626,28 @@ const ManageClaims = () => {
         description: "Document uploaded successfully.",
       });
 
-      // TODO: Refresh claim details to get updated document info
-      // await fetchClaimDetails(selectedClaim!.id);
     } catch (error) {
       console.error('Failed to upload document:', error);
+      
+      // Show specific error messages based on API response
+      let errorMessage = "Failed to upload document. Please try again.";
+      if (error instanceof Error) {
+        if (error.message.includes("only PDF files are supported")) {
+          errorMessage = "Only PDF files are supported for supporting documents.";
+        } else if (error.message.includes("file too large")) {
+          errorMessage = "File is too large. Maximum size is 5MB.";
+        } else if (error.message.includes("accepted claims")) {
+          errorMessage = "Supporting documents can only be uploaded to accepted claims.";
+        } else if (error.message.includes("file is required")) {
+          errorMessage = "Please select a file to upload.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Upload Failed",
-        description: "Failed to upload document. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -577,9 +658,44 @@ const ManageClaims = () => {
   };
 
   // Handle document view
-  const handleViewDocument = () => {
-    if (claimDocument?.url) {
-      window.open(claimDocument.url, '_blank');
+  const handleViewDocument = async () => {
+    if (!selectedClaim) return;
+
+    try {
+      // Fetch the pre-signed URL from the API
+      const response = await fetch(getApiUrl(`user/claim/${selectedClaim.id}/supporting-doc`));
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch document URL: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Open the document in a new tab
+      window.open(data.supporting_doc_url, '_blank');
+    } catch (error) {
+      console.error('Failed to fetch document URL:', error);
+      
+      // Show specific error messages based on API response
+      let errorMessage = "Failed to fetch document. Please try again.";
+      if (error instanceof Error) {
+        if (error.message.includes("No supporting document found")) {
+          errorMessage = "No supporting document found for this claim.";
+        } else if (error.message.includes("Claim not found")) {
+          errorMessage = "Claim not found.";
+        } else if (error.message.includes("Failed to generate pre-signed URL")) {
+          errorMessage = "Failed to generate document URL. Please try again.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
     }
   };
 
@@ -616,7 +732,7 @@ const ManageClaims = () => {
               {tabType === 'history' && (
                 <TableHead className="text-gray-400">Date Settled</TableHead>
               )}
-              {(tabType === 'pending' || tabType === 'history') && (
+              {tabType === 'pending' && (
                 <TableHead className="text-gray-400">Warranty Tagged</TableHead>
               )}
               <TableHead className="text-gray-400">Status</TableHead>
@@ -651,16 +767,21 @@ const ManageClaims = () => {
                       {claim.date_settled ? formatDate(claim.date_settled) : '-'}
                     </TableCell>
                   )}
-                  {(tabType === 'pending' || tabType === 'history') && (
+                  {tabType === 'pending' && (
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       {claim.tagged_warranty_id ? (
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleViewWarranty(claim.tagged_warranty_id!)}
+                          onClick={() => handleViewReceipt(claim.tagged_warranty_id!)}
+                          disabled={loadingReceipt}
                           className="text-white border-tayaria-gray hover:bg-tayaria-gray"
                         >
-                          <Eye className="h-4 w-4 mr-1" />
+                          {loadingReceipt ? (
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          ) : (
+                            <Eye className="h-4 w-4 mr-1" />
+                          )}
                           View
                         </Button>
                       ) : (
@@ -746,7 +867,7 @@ const ManageClaims = () => {
                   colSpan={
                     tabType === 'unacknowledged' ? 9 : 
                     tabType === 'pending' ? 10 : 
-                    11 // history tab has one extra column (Date Settled)
+                    10 // history tab now has same columns as pending (removed Warranty Tagged)
                   } 
                   className="text-center py-8"
                 >
@@ -856,10 +977,15 @@ const ManageClaims = () => {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleViewReceipt(warranty.receipt)}
+                              onClick={() => handleViewReceipt(warranty.id)}
+                              disabled={loadingReceipt}
                               className="text-white border-tayaria-gray hover:bg-tayaria-darkgray"
                             >
-                              <ExternalLink className="h-4 w-4 mr-1" />
+                              {loadingReceipt ? (
+                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                              ) : (
+                                <ExternalLink className="h-4 w-4 mr-1" />
+                              )}
                               View Receipt
                             </Button>
                             <Button
@@ -938,10 +1064,15 @@ const ManageClaims = () => {
                 </div>
                 <div className="pt-4">
                   <Button
-                    onClick={() => handleViewReceipt(selectedWarranty.receipt_url)}
+                    onClick={() => handleViewReceipt(selectedWarranty.id)}
+                    disabled={loadingReceipt}
                     className="bg-tayaria-yellow text-black hover:bg-tayaria-yellow/90"
                   >
-                    <ExternalLink className="h-4 w-4 mr-2" />
+                    {loadingReceipt ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                    )}
                     View Warranty Receipt
                   </Button>
                 </div>
@@ -1257,16 +1388,7 @@ const ManageClaims = () => {
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
-                              <div className="flex items-center space-x-3">
-                                <div className="flex-1">
-                                  <p className="text-white font-medium">{claimDocument.fileName}</p>
-                                  <div className="flex items-center space-x-4 text-sm text-gray-400">
-                                    <span>{claimDocument.fileSize}</span>
-                                    <span>•</span>
-                                    <span>Uploaded: {claimDocument.uploadDate}</span>
-                                  </div>
-                                </div>
-                              </div>
+                              <p className="text-white font-medium">{claimDocument.fileName}</p>
                             </div>
                             <Button
                               onClick={handleViewDocument}
@@ -1348,10 +1470,15 @@ const ManageClaims = () => {
                         </div>
                       </div>
                       <Button
-                        onClick={() => handleViewReceipt(detailedClaim.warranty.receipt)}
+                        onClick={() => handleViewReceipt(detailedClaim.warranty.id)}
+                        disabled={loadingReceipt}
                         className="bg-tayaria-yellow text-black hover:bg-tayaria-yellow/90"
                       >
-                        <ExternalLink className="h-4 w-4 mr-2" />
+                        {loadingReceipt ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                        )}
                         View Warranty Receipt
                       </Button>
                     </div>

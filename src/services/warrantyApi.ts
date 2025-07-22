@@ -66,14 +66,12 @@ const getWarrantyStatus = (expiryDate: string): 'active' | 'expired' | 'used' =>
 
 // API Functions
 export const warrantyApi = {
-  // Register a new warranty
-  async registerWarranty(data: CreateWarrantyRequest): Promise<Warranty> {
+  // Register a new warranty (now accepts FormData)
+  async registerWarranty(formData: FormData): Promise<Warranty> {
     const response = await fetch(getApiUrl('user/warranty'), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
+      // Do not set Content-Type; browser will set it automatically for FormData
+      body: formData,
     });
 
     if (!response.ok) {
@@ -91,6 +89,18 @@ export const warrantyApi = {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || `Failed to fetch warranties: ${response.status}`);
+    }
+
+    return response.json();
+  },
+
+  // Get receipt URL for a warranty
+  async getReceiptUrl(warrantyId: string): Promise<{ receipt_url: string }> {
+    const response = await fetch(getApiUrl(`user/warranty/receipt/${warrantyId}`));
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to fetch receipt URL: ${response.status}`);
     }
 
     return response.json();

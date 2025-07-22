@@ -52,22 +52,25 @@ export default function Warranty() {
     if (formData) {
       setIsRegistering(true);
       try {
-        // Convert form data to API request format
-        const apiRequest = convertFormDataToApiRequest(formData);
-        
+        // Build FormData for file upload
+        const formDataToSend = new FormData();
+        formDataToSend.append('name', formData.name || '');
+        formDataToSend.append('phone_number', formData.contactNumber || '');
+        formDataToSend.append('email', formData.email || '');
+        formDataToSend.append('purchase_date', new Date(formData.purchaseDate || '').toISOString());
+        formDataToSend.append('car_plate', (formData.carPlate || '').toUpperCase());
+        if (formData.receiptFile) {
+          formDataToSend.append('receipt', formData.receiptFile);
+        }
         // Call the backend API
-        const warranty = await warrantyApi.registerWarranty(apiRequest);
-        
+        const warranty = await warrantyApi.registerWarranty(formDataToSend);
         console.log("Warranty registered:", warranty);
-        
-        // Update UI state
         setCarPlate(formData.carPlate || "");
-      setActiveTab("check");
-        
-      toast({
-        title: "Success",
-        description: "Warranty registered successfully!",
-      });
+        setActiveTab("check");
+        toast({
+          title: "Success",
+          description: "Warranty registered successfully!",
+        });
       } catch (error) {
         console.error("Error registering warranty:", error);
         toast({

@@ -23,6 +23,7 @@ export interface ClaimResponse {
   car_plate: string;
   created_at: string;
   updated_at: string;
+  supporting_doc_url?: string;
 }
 
 // Frontend types
@@ -37,6 +38,7 @@ export interface Claim {
   date_settled?: string;
   rejection_reason?: string;
   date_closed?: string;
+  supporting_doc_url?: string;
 }
 
 // Helper function to convert frontend form data to backend API format
@@ -67,6 +69,7 @@ export const convertApiResponseToFrontendClaim = (apiResponse: ClaimResponse): C
     date_settled: apiResponse.date_settled || undefined,
     rejection_reason: apiResponse.rejection_reason || undefined,
     date_closed: apiResponse.date_closed || undefined,
+    supporting_doc_url: apiResponse.supporting_doc_url,
   };
 };
 
