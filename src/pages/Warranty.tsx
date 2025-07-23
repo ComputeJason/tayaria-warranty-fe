@@ -105,9 +105,16 @@ export default function Warranty() {
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-center space-x-2 md:space-x-4">
             <img 
-              src="/app_assets/tayaria_logo.png" 
+              src="/tayaria_logo.png" 
               alt="Tayaria Logo" 
               className="h-11 w-auto md:h-14 rounded-sm"
+              onError={(e) => {
+                // Fallback to app_assets if root path fails
+                const target = e.target as HTMLImageElement;
+                if (target.src.includes('/tayaria_logo.png')) {
+                  target.src = '/app_assets/tayaria_logo.png';
+                }
+              }}
             />
             <div className="text-center">
               <h1 className="text-xl md:text-3xl font-bold text-red-600 leading-tight">Tyre Warranty Management</h1>
