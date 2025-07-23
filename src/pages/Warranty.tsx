@@ -105,13 +105,15 @@ export default function Warranty() {
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-center space-x-2 md:space-x-4">
             <img 
-              src="/tayaria_logo.png" 
+              src="/tayaria-logo.jpg" 
               alt="Tayaria Logo" 
-              className="h-11 w-auto md:h-14 rounded-sm"
+              className="h-9 w-auto md:h-11 rounded-sm"
               onError={(e) => {
-                // Fallback to app_assets if root path fails
+                // Fallback chain: JPG -> PNG -> app_assets PNG
                 const target = e.target as HTMLImageElement;
-                if (target.src.includes('/tayaria_logo.png')) {
+                if (target.src.includes('/tayaria-logo.jpg')) {
+                  target.src = '/tayaria_logo.png';
+                } else if (target.src.includes('/tayaria_logo.png')) {
                   target.src = '/app_assets/tayaria_logo.png';
                 }
               }}
