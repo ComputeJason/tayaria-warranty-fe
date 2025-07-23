@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AlertTriangle, Eye, Upload, FileText, Image } from "lucide-react";
+import { AlertTriangle, Eye, Upload, FileText, Image, Loader2 } from "lucide-react";
 import { warrantyApi, convertFormDataToApiRequest } from '@/services/warrantyApi';
 import { isAfter, isBefore, subDays, startOfDay, parseISO } from 'date-fns';
 
@@ -47,6 +47,7 @@ interface ExtendedFormData {
 interface RegisterWarrantyProps {
   onSuccess: (carPlate: string) => void;
   onShowTerms: (data: ExtendedFormData) => void;
+  isLoading?: boolean;
 }
 
 // Helper to get today in Singapore time (UTC+8)
@@ -63,7 +64,7 @@ function formatDateYYYYMMDD(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyProps) {
+export function RegisterWarranty({ onSuccess, onShowTerms, isLoading = false }: RegisterWarrantyProps) {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [showSampleModal, setShowSampleModal] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -177,7 +178,14 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Full-page loading overlay */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-gray-500/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+          <Loader2 className="h-12 w-12 animate-spin text-white" />
+        </div>
+      )}
+      
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
@@ -185,9 +193,13 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Name</FormLabel>
+              <FormLabel className="text-black font-medium">Name</FormLabel>
               <FormControl>
-                <Input placeholder="Enter your name" {...field} className="bg-white text-black"/>
+                <Input 
+                  placeholder="Enter your name" 
+                  {...field} 
+                  className="bg-white text-black border-gray-300 focus:border-red-500 focus:ring-red-500 transition-colors"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -199,9 +211,13 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
           name="contactNumber"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Contact Number</FormLabel>
+              <FormLabel className="text-black font-medium">Contact Number</FormLabel>
               <FormControl>
-                <Input placeholder="Enter your contact number" {...field} className="bg-white text-black" />
+                <Input 
+                  placeholder="Enter your contact number" 
+                  {...field} 
+                  className="bg-white text-black border-gray-300 focus:border-red-500 focus:ring-red-500 transition-colors"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -213,9 +229,14 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email (Optional)</FormLabel>
+              <FormLabel className="text-black font-medium">Email (Optional)</FormLabel>
               <FormControl>
-                <Input placeholder="Enter your email (optional)" type="email" {...field} className="bg-white text-black" />
+                <Input 
+                  placeholder="Enter your email (optional)" 
+                  type="email" 
+                  {...field} 
+                  className="bg-white text-black border-gray-300 focus:border-red-500 focus:ring-red-500 transition-colors"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -227,14 +248,14 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
             name="purchaseDate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Purchase Date</FormLabel>
+                <FormLabel className="text-black font-medium">Purchase Date</FormLabel>
                 <FormControl>
                   <Input
                     placeholder="Enter purchase date"
                     type="date"
                     min={formatDateYYYYMMDD(minDate)}
                     max={formatDateYYYYMMDD(today)}
-                    className="bg-white text-black"
+                    className="bg-white text-black border-gray-300 focus:border-red-500 focus:ring-red-500 transition-colors"
                     {...field}
                     onBlur={(e) => {
                       const value = e.target.value;
@@ -262,9 +283,13 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
           name="carPlate"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Car Plate</FormLabel>
+              <FormLabel className="text-black font-medium">Car Plate</FormLabel>
               <FormControl>
-                <Input placeholder="Enter your car plate" {...field} className="bg-white text-black"/>
+                <Input 
+                  placeholder="Enter your car plate" 
+                  {...field} 
+                  className="bg-white text-black border-gray-300 focus:border-red-500 focus:ring-red-500 transition-colors"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -272,23 +297,23 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
         />
 
           {/* Disclaimer */}
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start space-x-3">
-            <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-amber-800">
-              <p className="font-medium mb-1">Important Notice</p>
+          <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-2 border-yellow-300 rounded-lg p-4 flex items-start space-x-3 shadow-sm">
+            <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-yellow-900">
+              <p className="font-medium mb-1 text-red-700">Important Notice</p>
               <p className="mb-3">
                 Your warranty is only valid if the uploaded receipt is clear and includes all required information. 
                 Warranties may be deemed invalid during claims if the receipt lacks essential details.
               </p>
               
-              <div className="mt-4 pt-3 border-t border-amber-300">
-                <p className="font-bold text-amber-900 mb-2">IMPORTANT WARRANTY TERMS:</p>
-                <div className="space-y-1 text-xs">
+              <div className="mt-4 pt-3 border-t border-yellow-400">
+                <p className="font-bold text-red-700 mb-2">IMPORTANT WARRANTY TERMS:</p>
+                <div className="space-y-1 text-xs text-yellow-900">
                   <p>1) Valid until 6 months from the date of purchase</p>
                   <p>2) Valid only if tyre has above 6mm of tread depth left</p>
                   <p>3) Valid only after a minimum purchase of 2 pcs in single receipt</p>
                   <p>4) Valid only for digital receipt</p>
-                  <p>5) Invalid for tyre damages that are beyond repair</p>
+                  <p>5) Valid only for tyre damages that are beyond repair</p>
                 </div>
               </div>
             </div>
@@ -297,13 +322,13 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
           {/* Receipt Upload Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <FormLabel className="text-base">Receipt Upload *</FormLabel>
+              <FormLabel className="text-base text-black font-medium">Receipt Upload *</FormLabel>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setShowSampleModal(true)}
-                className="text-xs"
+                className="text-xs bg-white text-black border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-colors"
               >
                 View Sample Receipts
               </Button>
@@ -316,12 +341,12 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
                 <FormItem>
                   <FormControl>
                     <div 
-                      className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                      className={`border-2 border-dashed rounded-lg p-6 text-center transition-all duration-300 ${
                         isDragOver 
-                          ? 'border-blue-400 bg-blue-50' 
+                          ? 'border-red-400 bg-red-50 scale-[1.02]' 
                           : uploadedFile 
-                            ? 'border-green-300 bg-green-50' 
-                            : 'border-gray-300 hover:border-gray-400'
+                            ? 'border-yellow-400 bg-yellow-50' 
+                            : 'border-gray-300 hover:border-red-300 hover:bg-red-50'
                       }`}
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
@@ -332,7 +357,7 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
                         <div className="space-y-4">
                           <div className="flex items-center justify-center space-x-3">
                             {uploadedFile.type.startsWith('image/') ? (
-                              <Image className="h-8 w-8 text-green-600" />
+                              <Image className="h-8 w-8 text-yellow-600" />
                             ) : (
                               <FileText className="h-8 w-8 text-red-600" />
                             )}
@@ -350,7 +375,7 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
                               <img
                                 src={previewUrl}
                                 alt="Receipt preview"
-                                className="max-h-32 rounded border"
+                                className="max-h-32 rounded border border-yellow-300"
                               />
                             </div>
                           )}
@@ -362,7 +387,7 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
                               variant="outline"
                               size="sm"
                               onClick={handlePreview}
-                              className="flex items-center space-x-1"
+                              className="flex items-center space-x-1 bg-white text-black border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-colors"
                             >
                               <Eye className="h-4 w-4" />
                               <span>Preview</span>
@@ -372,7 +397,7 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
                               variant="outline"
                               size="sm"
                               onClick={handleRemoveFile}
-                              className="flex items-center space-x-1 text-red-600 hover:text-red-700"
+                              className="flex items-center space-x-1 bg-white text-black border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-colors"
                             >
                               <span>Remove</span>
                             </Button>
@@ -381,7 +406,7 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
                       ) : (
                         // Upload prompt state
                         <>
-                          <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                          <Upload className="h-8 w-8 text-red-400 mx-auto mb-2" />
                           <div className="space-y-3">
                             <p className="text-sm text-gray-600">
                               {isDragOver ? 'Drop your receipt here' : 'Click to upload or drag and drop your receipt'}
@@ -398,7 +423,13 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
                               id="receipt-upload"
                             />
                             <label htmlFor="receipt-upload" className="cursor-pointer" >
-                              <Button type="button" variant="outline" size="sm" asChild>
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm" 
+                                asChild
+                                className="bg-white text-black border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                              >
                                 <span>Choose File</span>
                               </Button>
                             </label>
@@ -413,7 +444,10 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
             />
           </div>
 
-        <Button type="submit" className="w-full">
+        <Button 
+          type="submit" 
+          className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium py-3 rounded-lg transition-all duration-300 hover:scale-[1.02] shadow-lg"
+        >
           Register Warranty
         </Button>
       </form>
@@ -421,15 +455,15 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
 
       {/* Sample Receipts Modal */}
       <Dialog open={showSampleModal} onOpenChange={setShowSampleModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Sample Receipt Requirements</DialogTitle>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto border-2 border-yellow-300 bg-white shadow-xl">
+          <DialogHeader className="bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-t-lg p-4">
+            <DialogTitle className="text-red-700 font-bold">Sample Receipt Requirements</DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-6">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-medium text-blue-900 mb-2">Required Information</h3>
-              <p className="text-sm text-blue-800">
+          <div className="space-y-6 p-4">
+            <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg p-4">
+              <h3 className="font-medium text-red-900 mb-2">Required Information</h3>
+              <p className="text-sm text-red-800">
                 Your receipt must clearly show: <strong>Shop name</strong>, <strong>Tyre quantity</strong>, 
                 <strong>Tyre width size</strong>, <strong>Profile & rim size</strong>, and <strong>Tyre model</strong>.
               </p>
@@ -438,13 +472,14 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
             <div className="space-y-8">
               {/* PDF Sample */}
               <div className="space-y-3">
-                <h4 className="font-medium text-white">PDF Receipt Sample</h4>
-                <div className="border rounded-lg p-4 bg-gray-50 text-center">
-                  <p className="text-sm text-gray-600 mb-3">PDF Receipt Sample</p>
+                <h4 className="font-medium text-red-700">PDF Receipt Sample</h4>
+                <div className="border border-yellow-300 rounded-lg p-4 bg-yellow-50 text-center">
+                  <p className="text-sm text-yellow-800 mb-3">PDF Receipt Sample</p>
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => window.open('/app_assets/tayaria_sample_receipt.pdf', '_blank')}
+                    className="bg-white text-black border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-colors"
                   >
                     View PDF Sample
                   </Button>
@@ -453,8 +488,8 @@ export function RegisterWarranty({ onSuccess, onShowTerms }: RegisterWarrantyPro
 
               {/* Image Sample */}
               <div className="space-y-3">
-                <h4 className="font-medium text-white">Image Receipt Sample</h4>
-                <div className="border rounded-lg overflow-hidden">
+                <h4 className="font-medium text-red-700">Image Receipt Sample</h4>
+                <div className="border border-yellow-300 rounded-lg overflow-hidden">
                   <img
                     src="/app_assets/tayaria_sample_receipt.jpg"
                     alt="Sample receipt image"

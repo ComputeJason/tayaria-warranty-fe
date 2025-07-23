@@ -106,6 +106,18 @@ const AllClaims = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate phone number - must be at least 8 digits
+    const phoneDigits = formData.phone_number.replace(/\D/g, ''); // Remove non-digits
+    if (phoneDigits.length < 8) {
+      toast({
+        title: 'Validation Error',
+        description: 'Phone number must be at least 8 digits long.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ export default function Warranty() {
   const [showTerms, setShowTerms] = useState(false);
   const [formData, setFormData] = useState<WarrantyFormData | null>(null);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isPageLoaded, setIsPageLoaded] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,6 +47,15 @@ export default function Warranty() {
       setActiveTab("check");
     }
   }, [location]);
+
+  // Trigger animations on page load
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsPageLoaded(true);
+    }, 100); // Small delay to ensure DOM is ready
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleTermsAccept = async () => {
     setShowTerms(false);
@@ -85,51 +95,103 @@ export default function Warranty() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-center mb-8">Tyre Warranty Management</h1>
-      
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="register">Register Warranty</TabsTrigger>
-          <TabsTrigger value="check">Check Warranty Status</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="register">
-          <Card className="p-6">
-            <RegisterWarranty 
-              onSuccess={(plate) => {
-                setCarPlate(plate);
-                setActiveTab("check");
-                toast({
-                  title: "Success",
-                  description: "Warranty registered successfully!",
-                });
-              }}
-              onShowTerms={(data) => {
-                setFormData(data);
-                setShowTerms(true);
-              }}
+    <div className="min-h-screen bg-white">
+      {/* Header with Logo and Title */}
+      <div className={`bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 shadow-lg transition-all duration-1000 ease-out ${
+        isPageLoaded 
+          ? 'translate-y-0 opacity-100' 
+          : '-translate-y-full opacity-0'
+      }`}>
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-center space-x-2 md:space-x-4">
+            <img 
+              src="/app_assets/tayaria_logo.png" 
+              alt="Tayaria Logo" 
+              className="h-11 w-auto md:h-14 rounded-sm"
             />
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="check">
-          <Card className="p-6">
-            <CheckWarrantyStatus 
-              initialCarPlate={carPlate}
-              onNavigateToRegister={() => setActiveTab("register")}
-            />
-          </Card>
-        </TabsContent>
-      </Tabs>
+            <div className="text-center">
+              <h1 className="text-xl md:text-3xl font-bold text-red-600 leading-tight">Tyre Warranty Management</h1>
+              <p className="text-red-700 text-xs md:text-sm mt-1 font-bold">Secure your tyre investment with Tayaria</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <TermsAndConditions
-        open={showTerms}
-        onOpenChange={setShowTerms}
-        onAccept={handleTermsAccept}
-        formData={formData}
-        isLoading={isRegistering}
-      />
+      <div className="container mx-auto px-4 py-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-4xl mx-auto">
+          <TabsList 
+            className={`grid w-full grid-cols-2 bg-white border-2 border-yellow-300 p-1 rounded-lg shadow-md transition-all duration-1000 ease-out delay-500 ${
+              isPageLoaded 
+                ? 'translate-x-0 opacity-100' 
+                : 'translate-x-full opacity-0'
+            }`}
+          >
+            <TabsTrigger 
+              value="register" 
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-600 data-[state=active]:to-red-700 data-[state=active]:text-white data-[state=inactive]:text-red-700 data-[state=inactive]:hover:bg-red-50 transition-all duration-300 rounded-md"
+            >
+              Register Warranty
+            </TabsTrigger>
+            <TabsTrigger 
+              value="check" 
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-600 data-[state=active]:to-red-700 data-[state=active]:text-white data-[state=inactive]:text-red-700 data-[state=inactive]:hover:bg-red-50 transition-all duration-300 rounded-md"
+            >
+              Check Warranty Status
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent 
+            value="register" 
+            className={`mt-6 transition-all duration-1000 ease-out delay-800 ${
+              isPageLoaded 
+                ? 'translate-x-0 opacity-100' 
+                : '-translate-x-full opacity-0'
+            }`}
+          >
+            <Card className="p-6 bg-white border-2 border-yellow-200 shadow-lg rounded-xl">
+              <RegisterWarranty 
+                onSuccess={(plate) => {
+                  setCarPlate(plate);
+                  setActiveTab("check");
+                  toast({
+                    title: "Success",
+                    description: "Warranty registered successfully!",
+                  });
+                }}
+                onShowTerms={(data) => {
+                  setFormData(data);
+                  setShowTerms(true);
+                }}
+                isLoading={isRegistering}
+              />
+            </Card>
+          </TabsContent>
+          
+          <TabsContent 
+            value="check" 
+            className={`mt-6 transition-all duration-1000 ease-out delay-800 ${
+              isPageLoaded 
+                ? 'translate-x-0 opacity-100' 
+                : '-translate-x-full opacity-0'
+            }`}
+          >
+            <Card className="p-6 bg-white border-2 border-yellow-200 shadow-lg rounded-xl">
+              <CheckWarrantyStatus 
+                initialCarPlate={carPlate}
+                onNavigateToRegister={() => setActiveTab("register")}
+              />
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        <TermsAndConditions
+          open={showTerms}
+          onOpenChange={setShowTerms}
+          onAccept={handleTermsAccept}
+          formData={formData}
+          isLoading={isRegistering}
+        />
+      </div>
     </div>
   );
 } 

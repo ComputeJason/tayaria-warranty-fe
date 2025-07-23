@@ -68,13 +68,13 @@ class MasterClaimsApi {
       date_closed: claim.date_closed,
       customer_name: claim.customer_name,
       phone_number: claim.phone_number,
-      email: claim.email,
+      email: claim.email || '-',
       car_plate: claim.car_plate,
       created_at: claim.created_at,
       updated_at: claim.updated_at,
       // Frontend specific fields
-      shop_name: claim.shop_name || 'Dummy',
-      shop_contact: claim.contact || 'Dummy Number',
+      shop_name: claim.shop_name || '-',
+      shop_contact: claim.contact || '-',
       tagged_warranty_id: claim.warranty_id || undefined,
       tyre_details: claim.tyre_details,
       supporting_doc_url: claim.supporting_doc_url

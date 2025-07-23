@@ -62,7 +62,7 @@ export const convertApiResponseToFrontendClaim = (apiResponse: ClaimResponse): C
     id: apiResponse.id,
     customer_name: apiResponse.customer_name,
     phone_number: apiResponse.phone_number,
-    email: apiResponse.email,
+    email: apiResponse.email || "-",
     car_plate: apiResponse.car_plate,
     status: apiResponse.status,
     created_at: apiResponse.created_at,
