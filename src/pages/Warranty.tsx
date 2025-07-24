@@ -97,30 +97,55 @@ export default function Warranty() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header with Logo and Title */}
-      <div className={`bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 shadow-lg transition-all duration-1000 ease-out ${
+      <div className={`bg-gradient-to-r from-[#fdf100] from-30% md:from-30% from-45% via-yellow-300 to-yellow-500 shadow-lg transition-all duration-1000 ease-out relative ${
         isPageLoaded 
           ? 'translate-y-0 opacity-100' 
           : '-translate-y-full opacity-0'
       }`}>
         <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-center space-x-2 md:space-x-4">
+          {/* Mobile Layout: Stacked */}
+          <div className="md:hidden flex flex-col items-start space-y-2">
             <img 
-              src="/tayaria-logo.jpg" 
+              src="/app_assets/tayaria-logo-new.jpg" 
               alt="Tayaria Logo" 
-              className="h-9 w-auto md:h-11 rounded-sm"
+              className="h-20 w-auto rounded-sm flex-shrink-0 -ml-4 -mt-8"
               onError={(e) => {
-                // Fallback chain: JPG -> PNG -> app_assets PNG
+                // Fallback chain: new JPG -> old JPG -> PNG
                 const target = e.target as HTMLImageElement;
-                if (target.src.includes('/tayaria-logo.jpg')) {
-                  target.src = '/tayaria_logo.png';
-                } else if (target.src.includes('/tayaria_logo.png')) {
+                if (target.src.includes('/app_assets/tayaria-logo-new.jpg')) {
+                  target.src = '/app_assets/tayaria-logo.jpg';
+                } else if (target.src.includes('/app_assets/tayaria-logo.jpg')) {
                   target.src = '/app_assets/tayaria_logo.png';
                 }
               }}
             />
-            <div className="text-center">
-              <h1 className="text-xl md:text-3xl font-bold text-red-600 leading-tight">Tyre Warranty Management</h1>
-              <p className="text-red-700 text-xs md:text-sm mt-1 font-bold">Secure your tyre investment with Tayaria</p>
+            <div className="w-full text-center">
+              <h1 className="text-xl font-bold text-red-600 leading-tight -mt-3">Tyre Warranty Management</h1>
+              <p className="text-red-700 text-xs mt-1 font-bold">Secure your tyre investment with Tayaria</p>
+            </div>
+          </div>
+
+          {/* Desktop Layout: Side by side */}
+          <div className="hidden md:flex items-center">
+            <img 
+              src="/app_assets/tayaria-logo-new.jpg" 
+              alt="Tayaria Logo" 
+              className="h-24 w-auto rounded-sm flex-shrink-0"
+              onError={(e) => {
+                // Fallback chain: new JPG -> old JPG -> PNG
+                const target = e.target as HTMLImageElement;
+                if (target.src.includes('/app_assets/tayaria-logo-new.jpg')) {
+                  target.src = '/app_assets/tayaria-logo.jpg';
+                } else if (target.src.includes('/app_assets/tayaria-logo.jpg')) {
+                  target.src = '/app_assets/tayaria_logo.png';
+                }
+              }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="text-center">
+                <h1 className="text-3xl font-bold text-red-600 leading-tight">Tyre Warranty Management</h1>
+                <p className="text-red-700 text-sm mt-1 font-bold">Secure your tyre investment with Tayaria</p>
+              </div>
             </div>
           </div>
         </div>
