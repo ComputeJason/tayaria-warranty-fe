@@ -417,7 +417,6 @@ export function RegisterWarranty({ onSuccess, onShowTerms, isLoading = false }: 
                             <Input
                               type="file"
                               accept="image/*,.pdf"
-                              capture="environment"
                               onChange={handleFileInputChange}
                               className="hidden"
                               id="receipt-upload"
@@ -458,6 +457,14 @@ export function RegisterWarranty({ onSuccess, onShowTerms, isLoading = false }: 
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto border-2 border-yellow-300 bg-white shadow-xl">
           <DialogHeader className="bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-t-lg p-4">
             <DialogTitle className="text-red-700 font-bold">Sample Receipt Requirements</DialogTitle>
+            <button
+              onClick={() => setShowSampleModal(false)}
+              className="absolute top-1 right-1 p-2  border-gray-300 transition-colors z-10"
+            >
+              <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </DialogHeader>
           
           <div className="space-y-6 p-4">
