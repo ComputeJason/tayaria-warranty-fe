@@ -9,7 +9,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const [isSideMenuCollapsed, setIsSideMenuCollapsed] = useState(true);
 
   return (
-    <div className="flex min-h-screen bg-tayaria-black">
+    <div className="flex min-h-screen bg-gray-50">
       <AdminSideMenu onCollapseChange={setIsSideMenuCollapsed} />
       <div className={`flex-1 transition-all duration-300 ${
         isSideMenuCollapsed ? 'md:ml-16' : 'md:ml-64'

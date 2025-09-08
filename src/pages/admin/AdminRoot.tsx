@@ -7,14 +7,14 @@ export const AdminRoot = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-tayaria-black flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex items-center space-x-2">
-          <Loader2 className="h-8 w-8 animate-spin text-tayaria-yellow" />
-          <span className="text-white text-lg">Loading...</span>
+          <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+          <span className="text-gray-700 text-lg">Loading...</span>
         </div>
       </div>
     );
   }
 
   return <Navigate to={isAuthenticated ? '/admin/claims' : '/admin/login'} replace />;
-}; 
+};

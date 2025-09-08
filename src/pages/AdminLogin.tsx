@@ -52,39 +52,39 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-tayaria-black flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md p-6 bg-tayaria-darkgray rounded-lg shadow-lg">
-        <h1 className="text-2xl font-bold text-tayaria-yellow mb-6 text-center">Admin Login</h1>
+    <div className="min-h-screen bg-yellow-400 flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-lg border-2 border-yellow-300">
+        <h1 className="text-2xl font-bold text-red-700 mb-6 text-center">Tayaria Warranty Admin Login</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="username" className="block text-white mb-2">Username</label>
+            <label htmlFor="username" className="block text-gray-700 font-medium mb-2">Username</label>
             <Input
               id="username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter admin username"
-              className="bg-tayaria-gray text-white border-tayaria-gray"
+              className="bg-white text-gray-900 border-gray-300 focus:border-red-500 focus:ring-red-500"
               required
               disabled={loading}
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-white mb-2">Password</label>
+            <label htmlFor="password" className="block text-gray-700 font-medium mb-2">Password</label>
             <Input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter password"
-              className="bg-tayaria-gray text-white border-tayaria-gray"
+              className="bg-white text-gray-900 border-gray-300 focus:border-red-500 focus:ring-red-500"
               required
               disabled={loading}
             />
           </div>
           <Button
             type="submit"
-            className="w-full bg-tayaria-yellow hover:bg-tayaria-yellow/90 text-black"
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-3 rounded-lg transition-colors"
             disabled={loading}
           >
             {loading ? (
@@ -102,4 +102,4 @@ const AdminLogin = () => {
   );
 };
 
-export default AdminLogin; 
+export default AdminLogin;
