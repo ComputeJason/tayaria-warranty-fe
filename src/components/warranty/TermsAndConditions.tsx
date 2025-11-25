@@ -27,10 +27,7 @@ export const TermsAndConditionsContent = () => (
           • Offered by Kit Loong Tayaria Sdn Bhd (KLTSB) as a value-added programme.
         </p>
         <p>
-          • Covers Pirelli, Kumho, GT Radial, Road X and DoubleStar brand passenger car tyres purchased from KLT's authorised distributor.
-        </p>
-        <p>
-          • A minimum of two (2) tyres must be purchased in a single receipt to be eligible for the Road Hazard Warranty.
+          • Covers Pirelli, Kumho, GT Radial and RoadX brand passenger car tyres purchased from KLT's authorised distributor. For RoadX, coverage will apply to 17" and above only.
         </p>
       </div>
     </div>
@@ -39,10 +36,13 @@ export const TermsAndConditionsContent = () => (
       <h2 className="text-xl font-semibold text-red-700">2. Points of Coverage</h2>
       <div className="space-y-3 text-gray-700">
         <p>
+          • A minimum of two (2) tyres must be purchased in a single receipt.
+        </p>
+        <p>
           • Covers tyre damage beyond repair due to road hazards (e.g., punctures, cuts, potholes) within 6 months from purchase and when tread depth exceeds 6.0mm.
         </p>
         <p>
-          • Warranty claims require an original proof of purchase.
+          • Warranty claims require an original proof of purchase. (printed invoice)
         </p>
       </div>
     </div>
@@ -51,7 +51,16 @@ export const TermsAndConditionsContent = () => (
       <h2 className="text-xl font-semibold text-red-700">3. Warranty Registration Process</h2>
       <div className="space-y-3 text-gray-700">
         <p>
-          • Customers must register their warranty online at tayaria.com-warrantyregistration within 14 days from date of purchase. Registration after the 14-days' period will not be accepted.
+          • Customers must register their warranty online at{' '}
+          <a 
+            href="https://tayaria.com/online-warranty-registration/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-red-600 hover:text-red-700 underline"
+          >
+            tayaria-tyre-assist
+          </a>
+          {' '}within 14 days from date of purchase. Registration after the 14-days' period will not be accepted.
         </p>
         <p>
           • Required details include customer information, vehicle details, tyre details, and purchase information.
@@ -87,13 +96,10 @@ export const TermsAndConditionsContent = () => (
           • Does not cover tyres used on the wrong type of vehicle, uneven wear from mechanical issues, or tyres used for commercial/public utility vehicles.
         </p>
         <p>
-          • Off-road and racing tyres are excluded.
-        </p>
-        <p>
           • Does not cover damage due to improper mounting, maintenance issues, mechanical irregularities, or external causes like accidents or vandalism.
         </p>
         <p>
-          • Tyres used for motorsports, off-road applications, second-hand tyres, and those purchased from unauthorised dealers are excluded.
+          • Second-hand tyres, and those purchased from unauthorised dealers are excluded.
         </p>
       </div>
     </div>
@@ -135,7 +141,7 @@ const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-white border-2 border-yellow-300 max-h-[80vh] w-[90%] md:w-[900px] max-w-[900px] flex flex-col p-0 shadow-xl">
         <DialogHeader className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-6 pb-4 rounded-t-lg">
-          <DialogTitle className="text-red-700 text-center text-2xl mb-4 font-bold">KLTSB ROAD HAZARD WARRANTY TERMS & CONDITIONS</DialogTitle>
+          <DialogTitle className="text-red-700 text-center text-2xl mb-4 font-bold">Tayaria 360 Warranty Terms & Conditions</DialogTitle>
           <div className="border-t border-yellow-300 w-full" />
         </DialogHeader>
         

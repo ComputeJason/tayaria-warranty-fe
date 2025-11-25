@@ -55,13 +55,17 @@ const ManageClaims = () => {
     "Not Compliant - No Marking",
     "Not Compliant - Remaining Tread Depth <6mm"
   ] as const;
-  const [rejectionReason, setRejectionReason] = useState<typeof REJECTION_REASONS[number]>("Mechanical Failure");
+  const [rejectionReason, setRejectionReason] = useState<typeof REJECTION_REASONS[number]>("Over Warranty Period");
   
-  // Tyre details form state
+  // Tyre details form state (for Accept)
   const [tyreQuantity, setTyreQuantity] = useState<number>(1);
   const [tyreDetails, setTyreDetails] = useState<TyreDetail[]>([
     { id: '1', brand: 'Pirelli', size: '', tread_pattern: 'Cinturato P7' }
   ]);
+
+  // Tyre details form state (for Reject)
+  const [rejectTyreQuantity, setRejectTyreQuantity] = useState<number>(0);
+  const [rejectTyreDetails, setRejectTyreDetails] = useState<TyreDetail[]>([]);
 
   // Brand options
   const BRANDS = [
@@ -396,9 +400,11 @@ const ManageClaims = () => {
   const handleOpenConfirmModal = (claim: MasterClaim, action: 'accept' | 'reject') => {
     setSelectedClaim(claim);
     setConfirmAction(action);
-    setRejectionReason("Mechanical Failure"); // Set default value
+    setRejectionReason("Over Warranty Period"); // Set default value
     if (action === 'accept') {
       resetTyreForm();
+    } else {
+      resetRejectTyreForm();
     }
     setIsConfirmModalOpen(true);
   };
@@ -432,6 +438,23 @@ const ManageClaims = () => {
       } else {
         // Validate rejection reason
         if (!REJECTION_REASONS.includes(rejectionReason)) return;
+        
+        // Validate reject tyre details if quantity > 0
+        if (!isRejectTyreDetailsComplete()) return;
+
+        // Build request payload
+        const rejectPayload: { rejection_reason: string; tyre_details?: Array<{ brand: string; size: string; tread_pattern: string }> } = {
+          rejection_reason: rejectionReason
+        };
+
+        // Only include tyre_details if quantity > 0
+        if (rejectTyreQuantity > 0) {
+          rejectPayload.tyre_details = rejectTyreDetails.map(tyre => ({
+            brand: tyre.brand,
+            size: tyre.size,
+            tread_pattern: tyre.tread_pattern
+          }));
+        }
 
         response = await fetch(getApiUrl(`master/claim/${selectedClaim.id}/reject`), {
           method: 'POST',
@@ -439,7 +462,7 @@ const ManageClaims = () => {
             'Authorization': `Bearer ${localStorage.getItem('masterToken')}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ rejection_reason: rejectionReason })
+          body: JSON.stringify(rejectPayload)
         });
       }
 
@@ -463,8 +486,9 @@ const ManageClaims = () => {
       setIsConfirmModalOpen(false);
       setSelectedClaim(null);
       setConfirmAction(null);
-      setRejectionReason("Mechanical Failure");
+      setRejectionReason("Over Warranty Period");
       resetTyreForm();
+      resetRejectTyreForm();
     } catch (error) {
       console.error(`Failed to ${confirmAction} claim:`, error);
       handleAuthError(error as Error);
@@ -558,6 +582,47 @@ const ManageClaims = () => {
   const resetTyreForm = () => {
     setTyreQuantity(1);
     setTyreDetails([{ id: '1', brand: 'Pirelli', size: '', tread_pattern: 'Cinturato P7' }]);
+  };
+
+  // Handle reject tyre quantity change
+  const handleRejectTyreQuantityChange = (quantity: number) => {
+    setRejectTyreQuantity(quantity);
+    const newTyreDetails: TyreDetail[] = [];
+    for (let i = 0; i < quantity; i++) {
+      newTyreDetails.push({
+        id: (i + 1).toString(),
+        brand: 'Pirelli',
+        size: '',
+        tread_pattern: 'Cinturato P7'
+      });
+    }
+    setRejectTyreDetails(newTyreDetails);
+  };
+
+  // Handle reject tyre detail change
+  const handleRejectTyreDetailChange = (index: number, field: keyof TyreDetail, value: string | number) => {
+    const updatedTyreDetails = [...rejectTyreDetails];
+    updatedTyreDetails[index] = {
+      ...updatedTyreDetails[index],
+      [field]: value
+    };
+    setRejectTyreDetails(updatedTyreDetails);
+  };
+
+  // Check if all reject tyre details are filled (only if quantity > 0)
+  const isRejectTyreDetailsComplete = () => {
+    if (rejectTyreQuantity === 0) return true; // No tyres required
+    return rejectTyreDetails.every(tyre => 
+      tyre.brand.trim() !== '' && 
+      tyre.size.trim() !== '' && 
+      tyre.tread_pattern.trim() !== ''
+    );
+  };
+
+  // Reset reject tyre form
+  const resetRejectTyreForm = () => {
+    setRejectTyreQuantity(0);
+    setRejectTyreDetails([]);
   };
 
   // Handle document upload
@@ -1222,29 +1287,143 @@ const ManageClaims = () => {
               )}
               
               {confirmAction === 'reject' && (
-                <div>
-                  <label htmlFor="rejectionReason" className="block text-white font-medium mb-2">
-                    Reason for Rejection *
-                  </label>
-                  <Select 
-                    value={rejectionReason} 
-                    onValueChange={(value) => setRejectionReason(value as typeof REJECTION_REASONS[number])}
-                  >
-                    <SelectTrigger className="bg-tayaria-gray border-tayaria-gray text-white">
-                      <SelectValue placeholder="Select a reason" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-tayaria-gray border-tayaria-gray">
-                      {REJECTION_REASONS.map((reason) => (
-                        <SelectItem 
-                          key={reason} 
-                          value={reason}
-                          className="text-white hover:bg-tayaria-darkgray"
-                        >
-                          {reason}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="rejectionReason" className="block text-white font-medium mb-2">
+                      Reason for Rejection *
+                    </label>
+                    <Select 
+                      value={rejectionReason} 
+                      onValueChange={(value) => setRejectionReason(value as typeof REJECTION_REASONS[number])}
+                    >
+                      <SelectTrigger className="bg-tayaria-gray border-tayaria-gray text-white">
+                        <SelectValue placeholder="Select a reason" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-tayaria-gray border-tayaria-gray">
+                        {REJECTION_REASONS.map((reason) => (
+                          <SelectItem 
+                            key={reason} 
+                            value={reason}
+                            className="text-white hover:bg-tayaria-darkgray"
+                          >
+                            {reason}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-2">Tyre Details</h3>
+                    <p className="text-sm text-gray-400 mb-3">Optional: Fill the no. of tyre details as required by admin</p>
+                    <div className="mb-4">
+                      <label className="block text-white font-medium mb-2">
+                        Number of Tyres
+                      </label>
+                      <Select value={rejectTyreQuantity.toString()} onValueChange={(value) => handleRejectTyreQuantityChange(parseInt(value))}>
+                        <SelectTrigger className="bg-tayaria-gray border-tayaria-gray text-white">
+                          <SelectValue placeholder="Select quantity" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-tayaria-gray border-tayaria-gray">
+                          {[0, 1, 2, 3, 4].map(num => (
+                            <SelectItem key={num} value={num.toString()} className="text-white hover:bg-tayaria-darkgray">
+                              {num} {num === 1 ? 'Tyre' : 'Tyres'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {rejectTyreQuantity > 0 && (
+                      <div className="space-y-4">
+                        {rejectTyreDetails.map((tyre, index) => (
+                          <div key={tyre.id} className="p-4 bg-tayaria-gray rounded-lg">
+                            <h4 className="text-white font-medium mb-3">Tyre {index + 1}</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">
+                                  Brand *
+                                </label>
+                                <Select
+                                  value={tyre.brand}
+                                  onValueChange={(value) => {
+                                    const patterns = getTreadPatternsForBrand(value);
+                                    const newTreadPattern = patterns.length > 0 ? patterns[0] : '';
+                                    
+                                    const updatedTyreDetails = [...rejectTyreDetails];
+                                    updatedTyreDetails[index] = {
+                                      ...updatedTyreDetails[index],
+                                      brand: value,
+                                      tread_pattern: newTreadPattern
+                                    };
+                                    setRejectTyreDetails(updatedTyreDetails);
+                                  }}
+                                >
+                                  <SelectTrigger className="bg-black border-tayaria-gray text-white">
+                                    <SelectValue placeholder="Select brand" />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-black border-tayaria-gray">
+                                    {BRANDS.map(brand => (
+                                      <SelectItem 
+                                        key={brand} 
+                                        value={brand}
+                                        className="text-white hover:bg-tayaria-darkgray"
+                                      >
+                                        {brand}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">
+                                  Size *
+                                </label>
+                                <Input
+                                  value={tyre.size}
+                                  onChange={(e) => handleRejectTyreDetailChange(index, 'size', e.target.value)}
+                                  className="bg-black border-tayaria-gray text-white placeholder-gray-400"
+                                  placeholder="e.g., 205/55R16"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">
+                                  Tread Pattern *
+                                </label>
+                                <Select
+                                  value={tyre.tread_pattern}
+                                  onValueChange={(value) => handleRejectTyreDetailChange(index, 'tread_pattern', value)}
+                                >
+                                  <SelectTrigger className="bg-black border-tayaria-gray text-white">
+                                    <SelectValue placeholder="Select tread pattern" />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-black border-tayaria-gray">
+                                    {getTreadPatternsForBrand(tyre.brand).map(pattern => (
+                                      <SelectItem 
+                                        key={pattern} 
+                                        value={pattern}
+                                        className="text-white hover:bg-tayaria-darkgray"
+                                      >
+                                        {pattern}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {!isRejectTyreDetailsComplete() && (
+                          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                            <p className="text-red-400 text-sm">
+                              Please fill in all tyre details (brand, size, and tread pattern) for all {rejectTyreQuantity} tyre{rejectTyreQuantity > 1 ? 's' : ''}.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -1253,8 +1432,9 @@ const ManageClaims = () => {
                 variant="outline"
                 onClick={() => {
                   setIsConfirmModalOpen(false);
-                  setRejectionReason("Mechanical Failure");
+                  setRejectionReason("Over Warranty Period");
                   resetTyreForm();
+                  resetRejectTyreForm();
                 }}
                 className="border-tayaria-gray text-white hover:bg-tayaria-gray"
               >
@@ -1263,7 +1443,7 @@ const ManageClaims = () => {
               <Button
                 onClick={handleConfirmAction}
                 disabled={
-                  (confirmAction === 'reject' && !REJECTION_REASONS.includes(rejectionReason)) ||
+                  (confirmAction === 'reject' && (!REJECTION_REASONS.includes(rejectionReason) || !isRejectTyreDetailsComplete())) ||
                   (confirmAction === 'accept' && !isTyreDetailsComplete())
                 }
                 className={`${
@@ -1511,6 +1691,42 @@ const ManageClaims = () => {
                         <div className="flex justify-between items-center">
                           <span className="text-gray-400">Total Tyres:</span>
                           <span className="text-green-400 font-medium">
+                            {detailedClaim.claim.tyre_details.length} tyre{detailedClaim.claim.tyre_details.length > 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tyre Details - Only show if claim was rejected and has tyre details */}
+                {detailedClaim.claim.status === 'rejected' && detailedClaim.claim.tyre_details && detailedClaim.claim.tyre_details.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-3">Tyre Details</h3>
+                    <div className="space-y-4">
+                      {detailedClaim.claim.tyre_details.map((tyre, index) => (
+                        <div key={tyre.id} className="p-4 bg-tayaria-gray rounded-lg">
+                          <h4 className="text-white font-medium mb-2">Tyre {index + 1}</h4>
+                          <div className="grid grid-cols-3 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-400 mb-1">Brand</label>
+                              <p className="text-white">{tyre.brand}</p>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-400 mb-1">Size</label>
+                              <p className="text-white">{tyre.size}</p>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-400 mb-1">Tread Pattern</label>
+                              <p className="text-white">{tyre.tread_pattern}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400">Total Tyres:</span>
+                          <span className="text-red-400 font-medium">
                             {detailedClaim.claim.tyre_details.length} tyre{detailedClaim.claim.tyre_details.length > 1 ? 's' : ''}
                           </span>
                         </div>

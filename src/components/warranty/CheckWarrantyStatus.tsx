@@ -243,7 +243,7 @@ export function CheckWarrantyStatus({ initialCarPlate, onNavigateToRegister }: C
       <Dialog open={showTermsModal} onOpenChange={setShowTermsModal}>
         <DialogContent className="bg-white border-2 border-yellow-300 max-h-[80vh] w-[90%] md:w-[900px] max-w-[900px] flex flex-col p-0 shadow-xl">
           <DialogHeader className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-6 pb-4 rounded-t-lg relative">
-            <DialogTitle className="text-red-700 text-center text-2xl mb-4 font-bold">TERMS AND CONDITIONS</DialogTitle>
+            <DialogTitle className="text-red-700 text-center text-2xl mb-4 font-bold">Tayaria 360 Warranty Terms & Conditions</DialogTitle>
             <div className="border-t border-yellow-300 w-full" />
             <button
               onClick={() => setShowTermsModal(false)}

@@ -193,7 +193,7 @@ export function RegisterWarranty({ onSuccess, onShowTerms, isLoading = false }: 
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-black font-medium">Name</FormLabel>
+              <FormLabel className="text-black font-medium">Name *</FormLabel>
               <FormControl>
                 <Input 
                   placeholder="Enter your name" 
@@ -211,7 +211,7 @@ export function RegisterWarranty({ onSuccess, onShowTerms, isLoading = false }: 
           name="contactNumber"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-black font-medium">Contact Number</FormLabel>
+              <FormLabel className="text-black font-medium">Contact Number *</FormLabel>
               <FormControl>
                 <Input 
                   placeholder="Enter your contact number" 
@@ -248,7 +248,7 @@ export function RegisterWarranty({ onSuccess, onShowTerms, isLoading = false }: 
             name="purchaseDate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-black font-medium">Purchase Date</FormLabel>
+                <FormLabel className="text-black font-medium">Purchase Date *</FormLabel>
                 <FormControl>
                   <Input
                     placeholder="Enter purchase date"
@@ -283,7 +283,7 @@ export function RegisterWarranty({ onSuccess, onShowTerms, isLoading = false }: 
           name="carPlate"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-black font-medium">Car Plate</FormLabel>
+              <FormLabel className="text-black font-medium">Car Plate *</FormLabel>
               <FormControl>
                 <Input 
                   placeholder="Enter your car plate" 
