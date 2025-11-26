@@ -71,7 +71,7 @@ export function RegisterWarranty({ onSuccess, onShowTerms, isLoading = false }: 
   const [isDragOver, setIsDragOver] = useState(false);
 
   const today = getTodaySgt();
-  const minDate = subDays(today, 7); // 8 days including today
+  const minDate = subDays(today, 14); // 8 days including today
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -263,7 +263,7 @@ export function RegisterWarranty({ onSuccess, onShowTerms, isLoading = false }: 
                         const selected = startOfDay(parseISO(value));
                         if (isBefore(selected, minDate) || isAfter(selected, today)) {
                           form.setError("purchaseDate", {
-                            message: "Cannot register warranty more than 7 days after purchase",
+                            message: "Cannot register warranty more than 14 days after purchase",
                           });
                         } else {
                           form.clearErrors("purchaseDate");
