@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, ExternalLink, Tag, Check, X, Eye, Loader2 } from 'lucide-react';
+import { Search, ExternalLink, Tag, Check, X, Eye, Loader2, Download } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -171,6 +171,8 @@ const ManageClaims = () => {
     url: string;
   } | null>(null);
   const [loadingReceipt, setLoadingReceipt] = useState(false);
+  const [exportingWarranties, setExportingWarranties] = useState(false);
+  const [exportingClaims, setExportingClaims] = useState(false);
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -762,6 +764,88 @@ const ManageClaims = () => {
     }
   };
 
+  // Handle export all warranties
+  const handleExportWarranties = async () => {
+    setExportingWarranties(true);
+    try {
+      const response = await fetch(getApiUrl('master/export/warranties'), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('masterToken')}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to export warranties: ${response.status}`);
+      }
+
+      // Get the blob from the response
+      const blob = await response.blob();
+      
+      // Create a download link and trigger it
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'warranties.csv';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Success",
+        description: "Warranties exported successfully.",
+      });
+    } catch (error) {
+      console.error('Failed to export warranties:', error);
+      handleAuthError(error as Error);
+    } finally {
+      setExportingWarranties(false);
+    }
+  };
+
+  // Handle export all claims
+  const handleExportClaims = async () => {
+    setExportingClaims(true);
+    try {
+      const response = await fetch(getApiUrl('master/export/claims'), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('masterToken')}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to export claims: ${response.status}`);
+      }
+
+      // Get the blob from the response
+      const blob = await response.blob();
+      
+      // Create a download link and trigger it
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'claims.csv';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Success",
+        description: "Claims exported successfully.",
+      });
+    } catch (error) {
+      console.error('Failed to export claims:', error);
+      handleAuthError(error as Error);
+    } finally {
+      setExportingClaims(false);
+    }
+  };
+
   const filteredClaims = () => {
     return claims.filter(claim => {
       if (!claim) return false;
@@ -963,17 +1047,56 @@ const ManageClaims = () => {
         </div>
 
         <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-4">
-          <TabsList className="bg-tayaria-darkgray">
-            <TabsTrigger value="unacknowledged" className="data-[state=active]:bg-tayaria-yellow data-[state=active]:text-black">
-              Unacknowledged
-            </TabsTrigger>
-            <TabsTrigger value="pending" className="data-[state=active]:bg-tayaria-yellow data-[state=active]:text-black">
-              Pending
-            </TabsTrigger>
-            <TabsTrigger value="history" className="data-[state=active]:bg-tayaria-yellow data-[state=active]:text-black">
-              History
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between">
+            <TabsList className="bg-tayaria-darkgray">
+              <TabsTrigger value="unacknowledged" className="data-[state=active]:bg-tayaria-yellow data-[state=active]:text-black">
+                Unacknowledged
+              </TabsTrigger>
+              <TabsTrigger value="pending" className="data-[state=active]:bg-tayaria-yellow data-[state=active]:text-black">
+                Pending
+              </TabsTrigger>
+              <TabsTrigger value="history" className="data-[state=active]:bg-tayaria-yellow data-[state=active]:text-black">
+                History
+              </TabsTrigger>
+            </TabsList>
+            
+            <div className="flex gap-3">
+              <Button
+                onClick={handleExportWarranties}
+                disabled={exportingWarranties}
+                className="bg-green-500 hover:bg-green-600 text-white"
+              >
+                {exportingWarranties ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export All Warranties
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={handleExportClaims}
+                disabled={exportingClaims}
+                className="bg-green-500 hover:bg-green-600 text-white"
+              >
+                {exportingClaims ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export All Claims
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
 
           {loading ? (
             <div className="flex justify-center items-center py-8">
