@@ -20,6 +20,11 @@ export interface MasterClaim {
   tagged_warranty_id?: string;
   tyre_details?: TyreDetail[];
   supporting_doc_url?: string;
+  // Tyre info entered by the dealer at claim creation time - used to prefill the Accept form
+  brand?: string;
+  quantity?: number;
+  size?: string;
+  tread_pattern?: string;
 }
 
 export interface TyreDetail {
@@ -77,7 +82,11 @@ class MasterClaimsApi {
       shop_contact: claim.contact || '-',
       tagged_warranty_id: claim.warranty_id || undefined,
       tyre_details: claim.tyre_details,
-      supporting_doc_url: claim.supporting_doc_url
+      supporting_doc_url: claim.supporting_doc_url,
+      brand: claim.brand || undefined,
+      quantity: claim.quantity || undefined,
+      size: claim.size || undefined,
+      tread_pattern: claim.tread_pattern || undefined,
     };
   }
 

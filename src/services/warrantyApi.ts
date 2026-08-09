@@ -7,6 +7,7 @@ export interface CreateWarrantyRequest {
   email?: string;
   purchase_date: string;
   car_plate: string;
+  brand: string;
   receipt: string;
 }
 
@@ -18,6 +19,7 @@ export interface Warranty {
   purchase_date: string;
   expiry_date: string;
   car_plate: string;
+  brand: string;
   receipt: string;
   created_at: string;
   updated_at: string;
@@ -32,6 +34,7 @@ export const convertFormDataToApiRequest = (formData: any): CreateWarrantyReques
     email: formData.email,
     purchase_date: new Date(formData.purchaseDate).toISOString(),
     car_plate: formData.carPlate.toUpperCase(),
+    brand: formData.brand,
     receipt: formData.receipt || "https://example.com/receipt.pdf" // Fake URL for now
   };
 };

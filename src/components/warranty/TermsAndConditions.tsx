@@ -1,22 +1,4 @@
 import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-
-interface TermsAndConditionsProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onAccept: () => void;
-  formData?: any;
-  onSubmit?: (data: any) => void;
-  isLoading?: boolean;
-}
 
 export const TermsAndConditionsContent = () => (
   <div className="text-gray-800 space-y-8">
@@ -101,6 +83,9 @@ export const TermsAndConditionsContent = () => (
         <p>
           • Second-hand tyres, and those purchased from unauthorised dealers are excluded.
         </p>
+        <p>
+          • Does not cover for Tyre damages caused by installation, strike, riot, terrorism, malicious damage, floods & fire.
+        </p>
       </div>
     </div>
 
@@ -118,69 +103,3 @@ export const TermsAndConditionsContent = () => (
   </div>
 );
 
-const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({
-  open,
-  onOpenChange,
-  onAccept,
-  formData,
-  onSubmit,
-  isLoading,
-}) => {
-  const [accepted, setAccepted] = React.useState(false);
-
-  const handleAccept = () => {
-    if (accepted) {
-      onAccept();
-      if (formData && onSubmit) {
-        onSubmit(formData);
-      }
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-white border-2 border-yellow-300 max-h-[80vh] w-[90%] md:w-[900px] max-w-[900px] flex flex-col p-0 shadow-xl">
-        <DialogHeader className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-6 pb-4 rounded-t-lg">
-          <DialogTitle className="text-red-700 text-center text-2xl mb-4 font-bold">Tayaria 360 Warranty Terms & Conditions</DialogTitle>
-          <div className="border-t border-yellow-300 w-full" />
-        </DialogHeader>
-        
-        <div className="overflow-y-auto flex-1 px-6 py-4">
-          <TermsAndConditionsContent />
-        </div>
-
-        <div className="border-t border-yellow-300 p-6 bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-b-lg">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="terms"
-              checked={accepted}
-              onCheckedChange={(checked) => setAccepted(checked as boolean)}
-            />
-            <Label htmlFor="terms" className="text-gray-800 font-medium">
-              I have read and agree to the Terms and Conditions
-            </Label>
-          </div>
-
-          <div className="flex justify-end space-x-4 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="bg-white text-black border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-colors"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAccept}
-              disabled={!accepted || isLoading}
-              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium disabled:opacity-50 transition-all duration-300"
-            >
-              {isLoading ? 'Accepting...' : 'Accept & Continue'}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-export default TermsAndConditions; 

@@ -28,14 +28,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  claimsApi, 
-  convertFormDataToCreateClaimRequest, 
+import {
+  claimsApi,
+  convertFormDataToCreateClaimRequest,
   convertApiResponseToFrontendClaim,
-  type Claim 
+  type Claim
 } from '@/services/claimsApi';
 import { useAuth } from '@/contexts/AuthContext';
 import { getApiUrl } from '@/config/api';
+import { getTreadPatternsForBrand } from '@/constants/tyreBrands';
 
 // Claims interface and mock data are now imported from claimsApi service
 
@@ -56,7 +57,20 @@ const AllClaims = () => {
     email: '',
     car_plate: ''
   });
-  
+
+  // Create Claim modal: 2-step flow state
+  const [createStep, setCreateStep] = useState<1 | 2>(1);
+  const [verifiedCarPlate, setVerifiedCarPlate] = useState<string | null>(null);
+  const [verifiedBrands, setVerifiedBrands] = useState<string[]>([]);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [tyreFormData, setTyreFormData] = useState({
+    brand: '',
+    quantity: 1,
+    size: '',
+    tread_pattern: '',
+  });
+
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -104,9 +118,52 @@ const AllClaims = () => {
     }
   };
 
+  const resetCreateClaimForm = () => {
+    setFormData({
+      customer_name: '',
+      phone_number: '',
+      email: '',
+      car_plate: ''
+    });
+    setTyreFormData({ brand: '', quantity: 1, size: '', tread_pattern: '' });
+    setCreateStep(1);
+    setVerifiedCarPlate(null);
+    setVerifiedBrands([]);
+    setVerifyError(null);
+  };
+
+  const handleVerifyCarPlate = async () => {
+    if (!formData.car_plate.trim()) return;
+
+    setIsVerifying(true);
+    setVerifyError(null);
+
+    try {
+      const result = await claimsApi.verifyCarPlateBrands(formData.car_plate);
+      if (!result.valid || result.brands.length === 0) {
+        setVerifyError('No warranties tagged to entered car plate');
+        setVerifiedCarPlate(null);
+        setVerifiedBrands([]);
+        return;
+      }
+
+      setVerifiedBrands(result.brands);
+      setVerifiedCarPlate(formData.car_plate);
+      // Default to the latest brand (already sorted latest-first by the backend)
+      setTyreFormData(prev => ({ ...prev, brand: result.brands[0], tread_pattern: '' }));
+    } catch (error) {
+      console.error('Failed to verify car plate:', error);
+      setVerifyError(error instanceof Error ? error.message : 'Failed to verify car plate');
+      setVerifiedCarPlate(null);
+      setVerifiedBrands([]);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate phone number - must be at least 8 digits
     const phoneDigits = formData.phone_number.replace(/\D/g, ''); // Remove non-digits
     if (phoneDigits.length < 8) {
@@ -117,35 +174,39 @@ const AllClaims = () => {
       });
       return;
     }
-    
+
+    if (!tyreFormData.brand || !tyreFormData.size.trim() || !tyreFormData.tread_pattern) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in quantity, size and tread pattern.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
-    
+
     try {
       // Convert form data to API request format
-      const apiRequest = convertFormDataToCreateClaimRequest(formData);
-      
+      const apiRequest = convertFormDataToCreateClaimRequest({ ...formData, ...tyreFormData });
+
       // Create claim via API
       const apiResponse = await claimsApi.createClaim(apiRequest);
-      
+
       // Convert API response to frontend format and add to claims list
       const newClaim = convertApiResponseToFrontendClaim(apiResponse);
       setClaims(prevClaims => [newClaim, ...prevClaims]);
-      
+
       // Reset form and show success
-      setFormData({
-        customer_name: '',
-        phone_number: '',
-        email: '',
-        car_plate: ''
-      });
+      resetCreateClaimForm();
       setIsCreateModalOpen(false);
       setIsSuccessModalOpen(true);
-      
+
       toast({
         title: 'Success',
         description: 'Claim created successfully!',
       });
-      
+
     } catch (error) {
       console.error('Error creating claim:', error);
       handleAuthError(error as Error);
@@ -160,6 +221,12 @@ const AllClaims = () => {
       ...prev,
       [name]: value
     }));
+    // Any edit to the car plate after verification invalidates it, forcing re-verify
+    if (name === 'car_plate') {
+      setVerifiedCarPlate(null);
+      setVerifiedBrands([]);
+      setVerifyError(null);
+    }
   };
 
   // Sort toggle function
@@ -542,84 +609,227 @@ const AllClaims = () => {
         </div>
 
         {/* Create Claim Modal */}
-        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <Dialog
+          open={isCreateModalOpen}
+          onOpenChange={(open) => {
+            setIsCreateModalOpen(open);
+            if (!open) resetCreateClaimForm();
+          }}
+        >
           <DialogContent className="bg-white border-gray-300 text-gray-900">
             <DialogHeader>
-              <DialogTitle className="text-gray-900">Create New Claim</DialogTitle>
+              <DialogTitle className="text-gray-900">
+                Create New Claim {createStep === 2 && '- Tyre Details'}
+              </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="customer_name" className="block text-sm font-medium text-gray-600 mb-1">
-                  Customer Name *
-                </label>
-                <Input
-                  id="customer_name"
-                  name="customer_name"
-                  value={formData.customer_name}
-                  onChange={handleInputChange}
-                  className="bg-white border-gray-300 text-gray-900"
-                  required
-                />
+
+            {createStep === 1 ? (
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="customer_name" className="block text-sm font-medium text-gray-600 mb-1">
+                    Customer Name *
+                  </label>
+                  <Input
+                    id="customer_name"
+                    name="customer_name"
+                    value={formData.customer_name}
+                    onChange={handleInputChange}
+                    className="bg-white border-gray-300 text-gray-900"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="phone_number" className="block text-sm font-medium text-gray-600 mb-1">
+                    Phone Number *
+                  </label>
+                  <Input
+                    id="phone_number"
+                    name="phone_number"
+                    value={formData.phone_number}
+                    onChange={handleInputChange}
+                    className="bg-white border-gray-300 text-gray-900"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-600 mb-1">
+                    Email (Optional)
+                  </label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="bg-white border-gray-300 text-gray-900"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="car_plate" className="block text-sm font-medium text-gray-600 mb-1">
+                    Car Plate *
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="car_plate"
+                      name="car_plate"
+                      value={formData.car_plate}
+                      onChange={handleInputChange}
+                      className="bg-white border-gray-300 text-gray-900"
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleVerifyCarPlate}
+                      disabled={isVerifying || !formData.car_plate.trim()}
+                      className="bg-white text-gray-900 border-gray-300 hover:bg-gray-50 whitespace-nowrap"
+                    >
+                      {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Verify
+                    </Button>
+                  </div>
+                  {verifyError && (
+                    <p className="text-red-600 text-xs mt-1">{verifyError}</p>
+                  )}
+                  {verifiedCarPlate === formData.car_plate && verifiedBrands.length > 0 && (
+                    <p className="text-green-600 text-xs mt-1">Car plate verified.</p>
+                  )}
+                </div>
+
+                {verifiedCarPlate === formData.car_plate && verifiedBrands.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">
+                      Tyre Brand *
+                    </label>
+                    <Select
+                      value={tyreFormData.brand}
+                      onValueChange={(value) => setTyreFormData(prev => ({ ...prev, brand: value, tread_pattern: '' }))}
+                    >
+                      <SelectTrigger className="bg-white border-gray-300 text-gray-900">
+                        <SelectValue placeholder="Select brand" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-gray-300">
+                        {verifiedBrands.map((brand) => (
+                          <SelectItem key={brand} value={brand} className="text-gray-900 hover:bg-gray-50 focus:bg-gray-50">
+                            {brand}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsCreateModalOpen(false)}
+                    className="bg-white text-gray-900 border-gray-300 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => setCreateStep(2)}
+                    disabled={
+                      !verifiedCarPlate ||
+                      verifiedCarPlate !== formData.car_plate ||
+                      verifiedBrands.length === 0 ||
+                      !tyreFormData.brand
+                    }
+                    className="bg-green-600 hover:bg-green-700 text-gray-900"
+                  >
+                    Add Claim Details
+                  </Button>
+                </DialogFooter>
               </div>
-              <div>
-                <label htmlFor="phone_number" className="block text-sm font-medium text-gray-600 mb-1">
-                  Phone Number *
-                </label>
-                <Input
-                  id="phone_number"
-                  name="phone_number"
-                  value={formData.phone_number}
-                  onChange={handleInputChange}
-                  className="bg-white border-gray-300 text-gray-900"
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-600 mb-1">
-                  Email (Optional)
-                </label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="bg-white border-gray-300 text-gray-900"
-                />
-              </div>
-              <div>
-                <label htmlFor="car_plate" className="block text-sm font-medium text-gray-600 mb-1">
-                  Car Plate *
-                </label>
-                <Input
-                  id="car_plate"
-                  name="car_plate"
-                  value={formData.car_plate}
-                  onChange={handleInputChange}
-                  className="bg-white border-gray-300 text-gray-900"
-                  required
-                />
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsCreateModalOpen(false)}
-                  className="bg-white text-gray-900 border-gray-300 hover:bg-gray-50"
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  className="bg-green-600 hover:bg-green-700 text-gray-900"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isSubmitting ? 'Creating...' : 'Create Claim'}
-                </Button>
-              </DialogFooter>
-            </form>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                    Tyre Brand
+                  </label>
+                  <Input
+                    value={tyreFormData.brand}
+                    disabled
+                    className="bg-gray-100 border-gray-300 text-gray-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                    Quantity Claiming *
+                  </label>
+                  <Select
+                    value={tyreFormData.quantity.toString()}
+                    onValueChange={(value) => setTyreFormData(prev => ({ ...prev, quantity: parseInt(value) }))}
+                  >
+                    <SelectTrigger className="bg-white border-gray-300 text-gray-900">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-gray-300">
+                      {[1, 2, 3, 4].map((n) => (
+                        <SelectItem key={n} value={n.toString()} className="text-gray-900 hover:bg-gray-50 focus:bg-gray-50">
+                          {n} {n === 1 ? 'Tyre' : 'Tyres'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label htmlFor="size" className="block text-sm font-medium text-gray-600 mb-1">
+                    Size *
+                  </label>
+                  <Input
+                    id="size"
+                    value={tyreFormData.size}
+                    onChange={(e) => setTyreFormData(prev => ({ ...prev, size: e.target.value }))}
+                    placeholder="e.g., 205/55R16"
+                    className="bg-white border-gray-300 text-gray-900"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                    Tread Pattern *
+                  </label>
+                  <Select
+                    value={tyreFormData.tread_pattern}
+                    onValueChange={(value) => setTyreFormData(prev => ({ ...prev, tread_pattern: value }))}
+                  >
+                    <SelectTrigger className="bg-white border-gray-300 text-gray-900">
+                      <SelectValue placeholder="Select tread pattern" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-gray-300">
+                      {getTreadPatternsForBrand(tyreFormData.brand).map((pattern) => (
+                        <SelectItem key={pattern} value={pattern} className="text-gray-900 hover:bg-gray-50 focus:bg-gray-50">
+                          {pattern}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setCreateStep(1)}
+                    className="bg-white text-gray-900 border-gray-300 hover:bg-gray-50"
+                    disabled={isSubmitting}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="bg-green-600 hover:bg-green-700 text-gray-900"
+                    disabled={isSubmitting || !tyreFormData.size.trim() || !tyreFormData.tread_pattern}
+                  >
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isSubmitting ? 'Creating...' : 'Create Claim'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            )}
           </DialogContent>
         </Dialog>
 

@@ -48,30 +48,17 @@ const MasterSideMenu: React.FC<MasterSideMenuProps> = ({ onCollapseChange }) => 
           <FileText className="h-5 w-5" />
           {!isCollapsed && <span className="ml-3">Manage Claims</span>}
         </Link>
-        {/* Temporarily commented out until feature is ready
         <Link
-          to="/master/warranties"
+          to="/master/dashboard-new"
           className={`flex items-center p-3 rounded-lg transition-colors ${
-            location.pathname === '/master/warranties'
-              ? 'bg-tayaria-yellow/10 text-tayaria-yellow'
-              : 'text-gray-400 hover:bg-tayaria-gray/10 hover:text-white'
-          }`}
-        >
-          <ShieldCheck className="h-5 w-5" />
-          {!isCollapsed && <span className="ml-3">Manage Warranties</span>}
-        </Link>
-        <Link
-          to="/master/dashboard"
-          className={`flex items-center p-3 rounded-lg transition-colors ${
-            location.pathname === '/master/dashboard'
+            location.pathname === '/master/dashboard-new'
               ? 'bg-tayaria-yellow/10 text-tayaria-yellow'
               : 'text-gray-400 hover:bg-tayaria-gray/10 hover:text-white'
           }`}
         >
           <LayoutDashboard className="h-5 w-5" />
-          {!isCollapsed && <span className="ml-3">View Dashboard</span>}
+          {!isCollapsed && <span className="ml-3">Analytics</span>}
         </Link>
-        */}
         <Link
           to="/master/create-retail"
           className={`flex items-center p-3 rounded-lg transition-colors ${

@@ -21,6 +21,7 @@ import AllClaims from "./pages/admin/AllClaims";
 import ManageClaims from "./pages/master/ManageClaims";
 import ManageWarranties from "./pages/master/ManageWarranties";
 import Dashboard from "./pages/master/Dashboard";
+import DashboardNew from "./pages/master/DashboardNew";
 import CreateRetailAccount from "./pages/master/CreateRetailAccount";
 import MasterRoot from "./pages/master/MasterRoot";
 
@@ -91,6 +92,14 @@ const App = () => (
                   element={
                     <MasterProtectedRoute>
                       <Dashboard />
+                    </MasterProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/master/dashboard-new"
+                  element={
+                    <MasterProtectedRoute>
+                      <DashboardNew />
                     </MasterProtectedRoute>
                   }
                 />

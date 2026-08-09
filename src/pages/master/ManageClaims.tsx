@@ -34,6 +34,7 @@ import {
 import MasterLayout from '@/components/master/MasterLayout';
 import MasterHeader from '@/components/master/MasterHeader';
 import { type DetailedClaimResponse } from '@/services/masterClaimsApi';
+import { BRANDS, getTreadPatternsForBrand } from '@/constants/tyreBrands';
 
 // Remove the mock data and interfaces since we're using the ones from masterClaimsApi
 
@@ -66,97 +67,6 @@ const ManageClaims = () => {
   // Tyre details form state (for Reject)
   const [rejectTyreQuantity, setRejectTyreQuantity] = useState<number>(0);
   const [rejectTyreDetails, setRejectTyreDetails] = useState<TyreDetail[]>([]);
-
-  // Brand options
-  const BRANDS = [
-    'Pirelli',
-    'GT Radial',
-    'RoadX',
-    'Doublestar',
-    'Kumho'
-  ] as const;
-
-  // Brand to tread pattern mapping
-  const BRAND_PATTERNS: Record<string, string[]> = {
-    'Pirelli': [
-      'Cinturato P7',
-      'Cinturato P7 run flat',
-      'Cinturato P7C2',
-      'Cinturato P7C2 run flat',
-      'CInturato P7Blue',
-      'CNT-Rosso',
-      'P7AS',
-      'P Zero',
-      'P Zero run flat',
-      'P Zero PZ4',
-      'P Zero PZ4 run flat',
-      'P Zero Rosso',
-      'P Zero PZ5',
-      'P Zero PZ5 run flat',
-      'Scorpion ATR',
-      'Scorpion AT+',
-      'Scorpion Verde',
-      'Scorpion Verde run flat',
-      'Scorpion Veas',
-      'Scorpion Veas run flat',
-      'Scorpion Zero',
-      'Scorpion Zero All Season (SZROAS)',
-      'Powergy',
-      'P7 Evo',
-      'Dragon Sport'
-    ],
-    'GT Radial': [
-      'GTX pro',
-      'ECOTEC',
-      'FE2',
-      'Sportactive 2',
-      'Bxt pro',
-      'Luxe',
-      'Eco',
-      'Savero suv',
-      'Maxmiler pro'
-    ],
-    'RoadX': [
-      'MX440',
-      'U01',
-      'H/T01',
-      'UX01',
-      'H12',
-      'AT21',
-      'U11',
-      'SU01',
-      'H/T02',
-      'DU71'
-    ],
-    'Doublestar': [
-      'DS602',
-      'DH03',
-      'DU05',
-      'DL01',
-      'DS01',
-      'DSU02',
-      'DU01',
-      'DSS02'
-    ],
-    'Kumho': [
-      'Ecowing ES31',
-      'Ecsta PS31',
-      'Ecsta HS52',
-      'Ecsta PS71',
-      'Ecsta PS71 EV',
-      'Ecsta PS71 SUV',
-      'Ecsta Sport PS72',
-      'Ecsta Sport-S PS72-S',
-      'Crugen HP51',
-      'Crugen HP71',
-      'Crugen HP71 EV'
-    ]
-  };
-
-  // Get tread patterns for a specific brand
-  const getTreadPatternsForBrand = (brand: string): string[] => {
-    return BRAND_PATTERNS[brand] || [];
-  };
 
   // Add this to the state declarations at the top
   const [warranties, setWarranties] = useState<any[]>([]);
@@ -404,7 +314,7 @@ const ManageClaims = () => {
     setConfirmAction(action);
     setRejectionReason("Over Warranty Period"); // Set default value
     if (action === 'accept') {
-      resetTyreForm();
+      prefillTyreFormFromClaim(claim);
     } else {
       resetRejectTyreForm();
     }
@@ -584,6 +494,23 @@ const ManageClaims = () => {
   const resetTyreForm = () => {
     setTyreQuantity(1);
     setTyreDetails([{ id: '1', brand: 'Pirelli', size: '', tread_pattern: 'Cinturato P7' }]);
+  };
+
+  // Prefill the accept tyre form from what the dealer already entered on the claim, if present.
+  // Falls back to the default empty form for claims created before this data existed.
+  const prefillTyreFormFromClaim = (claim: MasterClaim) => {
+    if (claim.brand && claim.quantity && claim.size && claim.tread_pattern) {
+      setTyreQuantity(claim.quantity);
+      const prefilled: TyreDetail[] = Array.from({ length: claim.quantity }, (_, i) => ({
+        id: (i + 1).toString(),
+        brand: claim.brand!,
+        size: claim.size!,
+        tread_pattern: claim.tread_pattern!,
+      }));
+      setTyreDetails(prefilled);
+    } else {
+      resetTyreForm();
+    }
   };
 
   // Handle reject tyre quantity change

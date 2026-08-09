@@ -7,27 +7,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
 import { CheckWarrantyStatus } from '@/components/warranty/CheckWarrantyStatus';
 import { RegisterWarranty } from '@/components/warranty/RegisterWarranty';
-import TermsAndConditions from '@/components/warranty/TermsAndConditions';
-import { warrantyApi, convertFormDataToApiRequest } from '@/services/warrantyApi';
 import { testEnvironmentConfig } from '@/utils/envTest';
-
-// Type for the warranty form data
-interface WarrantyFormData {
-  name?: string;
-  contactNumber?: string;
-  email?: string;
-  purchaseDate?: string;
-  carPlate?: string;
-  receipt?: string;
-  receiptFile?: File;
-}
 
 export default function Warranty() {
   const [activeTab, setActiveTab] = useState("register");
   const [carPlate, setCarPlate] = useState("");
-  const [showTerms, setShowTerms] = useState(false);
-  const [formData, setFormData] = useState<WarrantyFormData | null>(null);
-  const [isRegistering, setIsRegistering] = useState(false);
   const [isPageLoaded, setIsPageLoaded] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -56,43 +40,6 @@ export default function Warranty() {
     
     return () => clearTimeout(timer);
   }, []);
-
-  const handleTermsAccept = async () => {
-    setShowTerms(false);
-    if (formData) {
-      setIsRegistering(true);
-      try {
-        // Build FormData for file upload
-        const formDataToSend = new FormData();
-        formDataToSend.append('name', formData.name || '');
-        formDataToSend.append('phone_number', formData.contactNumber || '');
-        formDataToSend.append('email', formData.email || '');
-        formDataToSend.append('purchase_date', new Date(formData.purchaseDate || '').toISOString());
-        formDataToSend.append('car_plate', (formData.carPlate || '').toUpperCase());
-        if (formData.receiptFile) {
-          formDataToSend.append('receipt', formData.receiptFile);
-        }
-        // Call the backend API
-        const warranty = await warrantyApi.registerWarranty(formDataToSend);
-        console.log("Warranty registered:", warranty);
-        setCarPlate(formData.carPlate || "");
-        setActiveTab("check");
-        toast({
-          title: "Success",
-          description: "Warranty registered successfully!",
-        });
-      } catch (error) {
-        console.error("Error registering warranty:", error);
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to register warranty",
-          variant: "destructive",
-        });
-      } finally {
-        setIsRegistering(false);
-      }
-    }
-  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -183,7 +130,7 @@ export default function Warranty() {
             }`}
           >
             <Card className="p-6 bg-white border-2 border-yellow-200 shadow-lg rounded-xl">
-              <RegisterWarranty 
+              <RegisterWarranty
                 onSuccess={(plate) => {
                   setCarPlate(plate);
                   setActiveTab("check");
@@ -192,11 +139,6 @@ export default function Warranty() {
                     description: "Warranty registered successfully!",
                   });
                 }}
-                onShowTerms={(data) => {
-                  setFormData(data);
-                  setShowTerms(true);
-                }}
-                isLoading={isRegistering}
               />
             </Card>
           </TabsContent>
@@ -217,14 +159,6 @@ export default function Warranty() {
             </Card>
           </TabsContent>
         </Tabs>
-
-        <TermsAndConditions
-          open={showTerms}
-          onOpenChange={setShowTerms}
-          onAccept={handleTermsAccept}
-          formData={formData}
-          isLoading={isRegistering}
-        />
       </div>
     </div>
   );

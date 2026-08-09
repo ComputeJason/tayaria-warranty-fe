@@ -19,7 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import TermsAndConditions, { TermsAndConditionsContent } from './TermsAndConditions';
+import { TermsAndConditionsContent } from './TermsAndConditions';
 import { warrantyApi, convertApiWarrantyToFrontend } from '@/services/warrantyApi';
 import { useToast } from "@/components/ui/use-toast";
 import { format } from 'date-fns';

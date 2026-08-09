@@ -7,6 +7,10 @@ export interface CreateClaimRequest {
   phone_number: string;
   email?: string;
   car_plate: string;
+  brand: string;
+  quantity: number;
+  size: string;
+  tread_pattern: string;
 }
 
 export interface ClaimResponse {
@@ -21,6 +25,10 @@ export interface ClaimResponse {
   phone_number: string;
   email: string;
   car_plate: string;
+  brand?: string;
+  quantity?: number;
+  size?: string;
+  tread_pattern?: string;
   created_at: string;
   updated_at: string;
   supporting_doc_url?: string;
@@ -47,12 +55,20 @@ export const convertFormDataToCreateClaimRequest = (formData: {
   phone_number: string;
   email: string;
   car_plate: string;
+  brand: string;
+  quantity: number;
+  size: string;
+  tread_pattern: string;
 }): CreateClaimRequest => {
   return {
     customer_name: formData.customer_name,
     phone_number: formData.phone_number,
     email: formData.email || undefined,
     car_plate: formData.car_plate.toUpperCase(),
+    brand: formData.brand,
+    quantity: formData.quantity,
+    size: formData.size,
+    tread_pattern: formData.tread_pattern,
   };
 };
 
@@ -75,6 +91,27 @@ export const convertApiResponseToFrontendClaim = (apiResponse: ClaimResponse): C
 
 // API Functions
 export const claimsApi = {
+  // Verify a car plate has a valid warranty and fetch its registered brand(s), latest first
+  async verifyCarPlateBrands(carPlate: string): Promise<{ valid: boolean; brands: string[] }> {
+    const response = await fetch(getApiUrl(`admin/warranties/brands/${encodeURIComponent(carPlate.toUpperCase())}`), {
+      method: 'GET',
+      headers: authApi.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Authentication required. Please login again.');
+      }
+      if (response.status === 403) {
+        throw new Error('You do not have permission to perform this action.');
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to verify car plate: ${response.status}`);
+    }
+
+    return response.json();
+  },
+
   // Create a new claim
   async createClaim(data: CreateClaimRequest): Promise<ClaimResponse> {
     if (import.meta.env.DEV) {

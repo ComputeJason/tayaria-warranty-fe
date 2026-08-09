@@ -12,6 +12,14 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -19,8 +27,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AlertTriangle, Eye, Upload, FileText, Image, Loader2 } from "lucide-react";
-import { warrantyApi, convertFormDataToApiRequest } from '@/services/warrantyApi';
+import { warrantyApi } from '@/services/warrantyApi';
+import { useToast } from "@/components/ui/use-toast";
 import { isAfter, isBefore, subDays, startOfDay, parseISO } from 'date-fns';
+import { BRANDS } from '@/constants/tyreBrands';
+import { TermsAndConditionsContent } from './TermsAndConditions';
+import { PDPAContent } from './PDPAContent';
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -28,26 +40,16 @@ const formSchema = z.object({
   email: z.string().email("Please enter a valid email").optional().or(z.literal("")),
   purchaseDate: z.string().min(1, "Purchase date is required"),
   carPlate: z.string().min(1, "Car plate is required"),
+  brand: z.string().min(1, "Please select a tyre brand"),
   receipt: z.string().min(1, "Receipt upload is required"),
+  agreeTerms: z.boolean().refine((v) => v === true, "You must agree to the Terms and Conditions"),
+  agreePdpa: z.boolean().refine((v) => v === true, "You must agree to the PDPA Policy"),
 });
 
 type FormData = z.infer<typeof formSchema>;
 
-// Extended type for internal use that includes the actual file
-interface ExtendedFormData {
-  name?: string;
-  contactNumber?: string;
-  email?: string;
-  purchaseDate?: string;
-  carPlate?: string;
-  receipt?: string;
-  receiptFile?: File;
-}
-
 interface RegisterWarrantyProps {
   onSuccess: (carPlate: string) => void;
-  onShowTerms: (data: ExtendedFormData) => void;
-  isLoading?: boolean;
 }
 
 // Helper to get today in Singapore time (UTC+8)
@@ -64,11 +66,15 @@ function formatDateYYYYMMDD(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-export function RegisterWarranty({ onSuccess, onShowTerms, isLoading = false }: RegisterWarrantyProps) {
+export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [showSampleModal, setShowSampleModal] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showTermsPopup, setShowTermsPopup] = useState(false);
+  const [showPdpaPopup, setShowPdpaPopup] = useState(false);
+  const { toast } = useToast();
 
   const today = getTodaySgt();
   const minDate = subDays(today, 14); // 8 days including today
@@ -81,6 +87,9 @@ export function RegisterWarranty({ onSuccess, onShowTerms, isLoading = false }: 
       email: "",
       purchaseDate: formatDateYYYYMMDD(today),
       carPlate: "",
+      brand: "",
+      agreeTerms: false,
+      agreePdpa: false,
     },
   });
 
@@ -168,24 +177,45 @@ export function RegisterWarranty({ onSuccess, onShowTerms, isLoading = false }: 
   };
 
   const onSubmit = async (data: FormData) => {
-    // For now, we'll still show terms first, but we could also submit directly
-    // The actual API call will happen in the parent component after terms acceptance
-    const extendedData: ExtendedFormData = {
-      ...data,
-      receiptFile: uploadedFile || undefined
-    };
-    onShowTerms(extendedData);
+    if (!uploadedFile) {
+      form.setError("receipt", { message: "Receipt upload is required" });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', data.name);
+      formDataToSend.append('phone_number', data.contactNumber);
+      formDataToSend.append('email', data.email || '');
+      formDataToSend.append('purchase_date', new Date(data.purchaseDate).toISOString());
+      formDataToSend.append('car_plate', data.carPlate.toUpperCase());
+      formDataToSend.append('brand', data.brand);
+      formDataToSend.append('receipt', uploadedFile);
+
+      await warrantyApi.registerWarranty(formDataToSend);
+      onSuccess(data.carPlate.toUpperCase());
+    } catch (error) {
+      console.error("Error registering warranty:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to register warranty",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="space-y-6 relative">
       {/* Full-page loading overlay */}
-      {isLoading && (
+      {isSubmitting && (
         <div className="absolute inset-0 bg-gray-500/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
           <Loader2 className="h-12 w-12 animate-spin text-white" />
         </div>
       )}
-      
+
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
@@ -285,12 +315,37 @@ export function RegisterWarranty({ onSuccess, onShowTerms, isLoading = false }: 
             <FormItem>
               <FormLabel className="text-black font-medium">Car Plate *</FormLabel>
               <FormControl>
-                <Input 
-                  placeholder="Enter your car plate" 
-                  {...field} 
+                <Input
+                  placeholder="Enter your car plate"
+                  {...field}
                   className="bg-white text-black border-gray-300 focus:border-red-500 focus:ring-red-500 transition-colors"
                 />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="brand"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-black font-medium">Tyre Brand *</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger className="bg-white text-black border-gray-300 focus:border-red-500 focus:ring-red-500 transition-colors">
+                    <SelectValue placeholder="Select tyre brand" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent className="bg-white border-gray-300">
+                  {BRANDS.map((brand) => (
+                    <SelectItem key={brand} value={brand} className="text-black hover:bg-gray-50 focus:bg-gray-50">
+                      {brand}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -443,11 +498,81 @@ export function RegisterWarranty({ onSuccess, onShowTerms, isLoading = false }: 
             />
           </div>
 
-        <Button 
-          type="submit" 
-          className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium py-3 rounded-lg transition-all duration-300 hover:scale-[1.02] shadow-lg"
+          {/* Terms & Conditions / PDPA acknowledgement */}
+          <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-2 border-yellow-300 rounded-lg p-4 space-y-3 shadow-sm">
+            <FormField
+              control={form.control}
+              name="agreeTerms"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-start space-x-2">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="mt-0.5"
+                      />
+                    </FormControl>
+                    <label className="text-sm text-yellow-900">
+                      I have read and agree to the{' '}
+                      <span
+                        role="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setShowTermsPopup(true);
+                        }}
+                        className="text-red-700 font-semibold underline cursor-pointer"
+                      >
+                        Tayaria 360 Warranty Terms &amp; Conditions
+                      </span>
+                    </label>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="agreePdpa"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-start space-x-2">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="mt-0.5"
+                      />
+                    </FormControl>
+                    <label className="text-sm text-yellow-900">
+                      I have read and agree to the{' '}
+                      <span
+                        role="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setShowPdpaPopup(true);
+                        }}
+                        className="text-red-700 font-semibold underline cursor-pointer"
+                      >
+                        PDPA Privacy Policy
+                      </span>
+                    </label>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium py-3 rounded-lg transition-all duration-300 hover:scale-[1.02] shadow-lg disabled:opacity-50"
         >
-          Register Warranty
+          {isSubmitting ? 'Registering...' : 'Register Warranty'}
         </Button>
       </form>
     </Form>
@@ -508,6 +633,32 @@ export function RegisterWarranty({ onSuccess, onShowTerms, isLoading = false }: 
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Terms & Conditions read-only popup */}
+      <Dialog open={showTermsPopup} onOpenChange={setShowTermsPopup}>
+        <DialogContent className="bg-white border-2 border-yellow-300 max-h-[80vh] w-[90%] md:w-[900px] max-w-[900px] flex flex-col p-0 shadow-xl">
+          <DialogHeader className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-6 pb-4 rounded-t-lg">
+            <DialogTitle className="text-red-700 text-center text-2xl mb-4 font-bold">Tayaria 360 Warranty Terms &amp; Conditions</DialogTitle>
+            <div className="border-t border-yellow-300 w-full" />
+          </DialogHeader>
+          <div className="overflow-y-auto flex-1 px-6 py-4">
+            <TermsAndConditionsContent />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* PDPA Policy read-only popup */}
+      <Dialog open={showPdpaPopup} onOpenChange={setShowPdpaPopup}>
+        <DialogContent className="bg-white border-2 border-yellow-300 max-h-[80vh] w-[90%] md:w-[900px] max-w-[900px] flex flex-col p-0 shadow-xl">
+          <DialogHeader className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-6 pb-4 rounded-t-lg">
+            <DialogTitle className="text-red-700 text-center text-2xl mb-4 font-bold">PDPA Privacy Policy</DialogTitle>
+            <div className="border-t border-yellow-300 w-full" />
+          </DialogHeader>
+          <div className="overflow-y-auto flex-1 px-6 py-4">
+            <PDPAContent />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-} 
+}
