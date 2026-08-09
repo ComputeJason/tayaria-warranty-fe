@@ -26,13 +26,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AlertTriangle, Eye, Upload, FileText, Image, Loader2 } from "lucide-react";
+import { AlertTriangle, Eye, Upload, FileText, Image, Loader2, X, ShieldCheck } from "lucide-react";
 import { warrantyApi } from '@/services/warrantyApi';
 import { useToast } from "@/components/ui/use-toast";
 import { isAfter, isBefore, subDays, startOfDay, parseISO } from 'date-fns';
 import { BRANDS } from '@/constants/tyreBrands';
 import { TermsAndConditionsContent } from './TermsAndConditions';
 import { PDPAContent } from './PDPAContent';
+import { COLORS, fieldInputClass, fieldLabelClass, primaryButtonClass, secondaryButtonClass } from './appleTheme';
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -116,7 +117,7 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
     }
 
     setUploadedFile(file);
-    
+
     // Generate a fake URL for the backend API since file upload isn't implemented yet
     const fakeUrl = `https://example.com/receipts/${file.name}`;
     form.setValue("receipt", fakeUrl);
@@ -151,7 +152,7 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    
+
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
       handleFileUpload(files[0]);
@@ -208,185 +209,167 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
   };
 
   return (
-    <div className="space-y-6 relative">
+    <div className="relative">
       {/* Full-page loading overlay */}
       {isSubmitting && (
-        <div className="absolute inset-0 bg-gray-500/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
-          <Loader2 className="h-12 w-12 animate-spin text-white" />
+        <div className="absolute inset-0 z-50 flex items-center justify-center rounded-2xl bg-white/70 backdrop-blur-sm">
+          <Loader2 className="h-8 w-8 animate-spin" style={{ color: COLORS.red }} />
         </div>
       )}
 
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-black font-medium">Name *</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="Enter your name" 
-                  {...field} 
-                  className="bg-white text-black border-gray-300 focus:border-red-500 focus:ring-red-500 transition-colors"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-6 md:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={fieldLabelClass}>Full Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. Tan Wei Ming" {...field} className={fieldInputClass} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <FormField
-          control={form.control}
-          name="contactNumber"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-black font-medium">Contact Number *</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="Enter your contact number" 
-                  {...field} 
-                  className="bg-white text-black border-gray-300 focus:border-red-500 focus:ring-red-500 transition-colors"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+            <FormField
+              control={form.control}
+              name="contactNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={fieldLabelClass}>Contact Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. 91234567" {...field} className={fieldInputClass} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-black font-medium">Email (Optional)</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="Enter your email (optional)" 
-                  type="email" 
-                  {...field} 
-                  className="bg-white text-black border-gray-300 focus:border-red-500 focus:ring-red-500 transition-colors"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={fieldLabelClass}>Email (optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="you@example.com" type="email" {...field} className={fieldInputClass} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="purchaseDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-black font-medium">Purchase Date *</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Enter purchase date"
-                    type="date"
-                    min={formatDateYYYYMMDD(minDate)}
-                    max={formatDateYYYYMMDD(today)}
-                    className="bg-white text-black border-gray-300 focus:border-red-500 focus:ring-red-500 transition-colors"
-                    {...field}
-                    onBlur={(e) => {
-                      const value = e.target.value;
-                      if (value) {
-                        const selected = startOfDay(parseISO(value));
-                        if (isBefore(selected, minDate) || isAfter(selected, today)) {
-                          form.setError("purchaseDate", {
-                            message: "Cannot register warranty more than 14 days after purchase",
-                          });
-                        } else {
-                          form.clearErrors("purchaseDate");
+            <FormField
+              control={form.control}
+              name="purchaseDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={fieldLabelClass}>Purchase Date</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter purchase date"
+                      type="date"
+                      min={formatDateYYYYMMDD(minDate)}
+                      max={formatDateYYYYMMDD(today)}
+                      className={fieldInputClass}
+                      {...field}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value) {
+                          const selected = startOfDay(parseISO(value));
+                          if (isBefore(selected, minDate) || isAfter(selected, today)) {
+                            form.setError("purchaseDate", {
+                              message: "Cannot register warranty more than 14 days after purchase",
+                            });
+                          } else {
+                            form.clearErrors("purchaseDate");
+                          }
                         }
-                      }
-                      field.onBlur && field.onBlur();
-                    }}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                        field.onBlur && field.onBlur();
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <FormField
-          control={form.control}
-          name="carPlate"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-black font-medium">Car Plate *</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Enter your car plate"
-                  {...field}
-                  className="bg-white text-black border-gray-300 focus:border-red-500 focus:ring-red-500 transition-colors"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+            <FormField
+              control={form.control}
+              name="carPlate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={fieldLabelClass}>Car Plate</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. SBA1234A" {...field} className={fieldInputClass} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <FormField
-          control={form.control}
-          name="brand"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-black font-medium">Tyre Brand *</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger className="bg-white text-black border-gray-300 focus:border-red-500 focus:ring-red-500 transition-colors">
-                    <SelectValue placeholder="Select tyre brand" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent className="bg-white border-gray-300">
-                  {BRANDS.map((brand) => (
-                    <SelectItem key={brand} value={brand} className="text-black hover:bg-gray-50 focus:bg-gray-50">
-                      {brand}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+            <FormField
+              control={form.control}
+              name="brand"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={fieldLabelClass}>Tyre Brand</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className={fieldInputClass}>
+                        <SelectValue placeholder="Select tyre brand" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="bg-white border-gray-200">
+                      {BRANDS.map((brand) => (
+                        <SelectItem key={brand} value={brand} className="text-[#0A0A0A] hover:bg-gray-50 focus:bg-gray-50">
+                          {brand}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
           {/* Disclaimer */}
-          <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-2 border-yellow-300 rounded-lg p-4 flex items-start space-x-3 shadow-sm">
-            <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-yellow-900">
-              <p className="font-medium mb-1 text-red-700">Important Notice</p>
-              <p className="mb-3">
-                Your warranty is only valid if the uploaded receipt is clear and includes all required information. 
+          <div className="flex items-start gap-3 rounded-2xl border border-gray-200 bg-[#FAFAFA] p-5">
+            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" style={{ color: COLORS.yellow }} />
+            <div className="text-sm text-gray-600">
+              <p className="mb-1 font-semibold text-[#0A0A0A]">Important notice</p>
+              <p className="mb-3 leading-relaxed">
+                Your warranty is only valid if the uploaded receipt is clear and includes all required information.
                 Warranties may be deemed invalid during claims if the receipt lacks essential details.
               </p>
-              
-              <div className="mt-4 pt-3 border-t border-yellow-400">
-                <p className="font-bold text-red-700 mb-2">IMPORTANT WARRANTY TERMS:</p>
-                <div className="space-y-1 text-xs text-yellow-900">
-                  <p>1) Valid until 6 months from the date of purchase</p>
-                  <p>2) Valid only if tyre has above 6mm of tread depth left</p>
-                  <p>3) Valid only after a minimum purchase of 2 pcs in single receipt</p>
-                  <p>4) Valid only for digital receipt</p>
-                  <p>5) Valid only for tyre damages that are beyond repair</p>
-                </div>
+
+              <div className="mt-4 space-y-1 border-t border-gray-200 pt-3 text-[13px] leading-relaxed text-gray-500">
+                <p className="mb-1 font-semibold text-gray-700">Warranty terms</p>
+                <p>1) Valid until 6 months from the date of purchase</p>
+                <p>2) Valid only if tyre has above 6mm of tread depth left</p>
+                <p>3) Valid only after a minimum purchase of 2 pcs in single receipt</p>
+                <p>4) Valid only for digital receipt</p>
+                <p>5) Valid only for tyre damages that are beyond repair</p>
               </div>
             </div>
           </div>
 
           {/* Receipt Upload Section */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <FormLabel className="text-base text-black font-medium">Receipt Upload *</FormLabel>
-              <Button
+              <FormLabel className={`${fieldLabelClass} text-[15px] text-[#0A0A0A]`}>Receipt Upload</FormLabel>
+              <button
                 type="button"
-                variant="outline"
-                size="sm"
                 onClick={() => setShowSampleModal(true)}
-                className="text-xs bg-white text-black border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                className="text-[13px] font-medium underline decoration-gray-300 underline-offset-4 transition-colors hover:decoration-gray-500"
+                style={{ color: COLORS.redHover }}
               >
-                View Sample Receipts
-              </Button>
+                View sample receipts
+              </button>
             </div>
 
             <FormField
@@ -395,14 +378,15 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
               render={({ field: { onChange, ...field } }) => (
                 <FormItem>
                   <FormControl>
-                    <div 
-                      className={`border-2 border-dashed rounded-lg p-6 text-center transition-all duration-300 ${
-                        isDragOver 
-                          ? 'border-red-400 bg-red-50 scale-[1.02]' 
-                          : uploadedFile 
-                            ? 'border-yellow-400 bg-yellow-50' 
-                            : 'border-gray-300 hover:border-red-300 hover:bg-red-50'
+                    <div
+                      className={`rounded-2xl border-2 border-dashed p-8 text-center transition-all duration-200 ${
+                        isDragOver
+                          ? 'scale-[1.01] bg-[#FBEAE8]'
+                          : uploadedFile
+                            ? 'border-gray-200 bg-[#FAFAFA]'
+                            : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
                       }`}
+                      style={isDragOver ? { borderColor: COLORS.red } : undefined}
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
                       onDrop={handleDrop}
@@ -410,15 +394,15 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
                       {uploadedFile ? (
                         // File uploaded state
                         <div className="space-y-4">
-                          <div className="flex items-center justify-center space-x-3">
+                          <div className="flex items-center justify-center gap-3">
                             {uploadedFile.type.startsWith('image/') ? (
-                              <Image className="h-8 w-8 text-yellow-600" />
+                              <Image className="h-7 w-7" style={{ color: COLORS.yellow }} />
                             ) : (
-                              <FileText className="h-8 w-8 text-red-600" />
+                              <FileText className="h-7 w-7" style={{ color: COLORS.red }} />
                             )}
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">{uploadedFile.name}</p>
-                              <p className="text-xs text-gray-500">
+                            <div className="text-left">
+                              <p className="text-sm font-medium text-[#0A0A0A]">{uploadedFile.name}</p>
+                              <p className="text-xs text-gray-400">
                                 {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
                               </p>
                             </div>
@@ -430,44 +414,41 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
                               <img
                                 src={previewUrl}
                                 alt="Receipt preview"
-                                className="max-h-32 rounded border border-yellow-300"
+                                className="max-h-32 rounded-xl border border-gray-200"
                               />
                             </div>
                           )}
 
                           {/* Action Buttons */}
-                          <div className="flex justify-center space-x-2">
-                            <Button
+                          <div className="flex justify-center gap-2">
+                            <button
                               type="button"
-                              variant="outline"
-                              size="sm"
                               onClick={handlePreview}
-                              className="flex items-center space-x-1 bg-white text-black border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                              className={secondaryButtonClass}
                             >
-                              <Eye className="h-4 w-4" />
-                              <span>Preview</span>
-                            </Button>
-                            <Button
+                              <Eye className="h-3.5 w-3.5" />
+                              Preview
+                            </button>
+                            <button
                               type="button"
-                              variant="outline"
-                              size="sm"
                               onClick={handleRemoveFile}
-                              className="flex items-center space-x-1 bg-white text-black border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                              className={secondaryButtonClass}
                             >
-                              <span>Remove</span>
-                            </Button>
+                              <X className="h-3.5 w-3.5" />
+                              Remove
+                            </button>
                           </div>
                         </div>
                       ) : (
                         // Upload prompt state
                         <>
-                          <Upload className="h-8 w-8 text-red-400 mx-auto mb-2" />
+                          <Upload className="mx-auto mb-3 h-7 w-7 text-gray-300" />
                           <div className="space-y-3">
                             <p className="text-sm text-gray-600">
                               {isDragOver ? 'Drop your receipt here' : 'Click to upload or drag and drop your receipt'}
                             </p>
-                            <p className="text-xs text-gray-500 pb-4">
-                              Supports: JPG, PNG, GIF, PDF (Max 10MB)
+                            <p className="pb-1 text-xs text-gray-400">
+                              JPG, PNG, GIF or PDF &middot; Max 10MB
                             </p>
                             <Input
                               type="file"
@@ -476,16 +457,8 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
                               className="hidden"
                               id="receipt-upload"
                             />
-                            <label htmlFor="receipt-upload" className="cursor-pointer" >
-                              <Button 
-                                type="button" 
-                                variant="outline" 
-                                size="sm" 
-                                asChild
-                                className="bg-white text-black border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-colors"
-                              >
-                                <span>Choose File</span>
-                              </Button>
+                            <label htmlFor="receipt-upload" className="inline-block cursor-pointer">
+                              <span className={secondaryButtonClass}>Choose File</span>
                             </label>
                           </div>
                         </>
@@ -499,21 +472,21 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
           </div>
 
           {/* Terms & Conditions / PDPA acknowledgement */}
-          <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-2 border-yellow-300 rounded-lg p-4 space-y-3 shadow-sm">
+          <div className="space-y-3 rounded-2xl border border-gray-200 bg-[#FAFAFA] p-5">
             <FormField
               control={form.control}
               name="agreeTerms"
               render={({ field }) => (
                 <FormItem>
-                  <div className="flex items-start space-x-2">
+                  <div className="flex items-start gap-2.5">
                     <FormControl>
                       <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
-                        className="mt-0.5"
+                        className="mt-0.5 border-gray-300 data-[state=checked]:border-[#A6291F] data-[state=checked]:bg-[#A6291F] data-[state=checked]:text-white"
                       />
                     </FormControl>
-                    <label className="text-sm text-yellow-900">
+                    <label className="text-sm text-gray-600">
                       I have read and agree to the{' '}
                       <span
                         role="button"
@@ -522,7 +495,8 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
                           e.stopPropagation();
                           setShowTermsPopup(true);
                         }}
-                        className="text-red-700 font-semibold underline cursor-pointer"
+                        className="cursor-pointer font-medium underline decoration-gray-300 underline-offset-4"
+                        style={{ color: COLORS.redHover }}
                       >
                         Tayaria 360 Warranty Terms &amp; Conditions
                       </span>
@@ -538,15 +512,15 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
               name="agreePdpa"
               render={({ field }) => (
                 <FormItem>
-                  <div className="flex items-start space-x-2">
+                  <div className="flex items-start gap-2.5">
                     <FormControl>
                       <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
-                        className="mt-0.5"
+                        className="mt-0.5 border-gray-300 data-[state=checked]:border-[#A6291F] data-[state=checked]:bg-[#A6291F] data-[state=checked]:text-white"
                       />
                     </FormControl>
-                    <label className="text-sm text-yellow-900">
+                    <label className="text-sm text-gray-600">
                       I have read and agree to the{' '}
                       <span
                         role="button"
@@ -555,7 +529,8 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
                           e.stopPropagation();
                           setShowPdpaPopup(true);
                         }}
-                        className="text-red-700 font-semibold underline cursor-pointer"
+                        className="cursor-pointer font-medium underline decoration-gray-300 underline-offset-4"
+                        style={{ color: COLORS.redHover }}
                       >
                         PDPA Privacy Policy
                       </span>
@@ -567,65 +542,61 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
             />
           </div>
 
-        <Button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium py-3 rounded-lg transition-all duration-300 hover:scale-[1.02] shadow-lg disabled:opacity-50"
-        >
-          {isSubmitting ? 'Registering...' : 'Register Warranty'}
-        </Button>
-      </form>
-    </Form>
+          <Button type="submit" disabled={isSubmitting} className={primaryButtonClass}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Registering&hellip;
+              </>
+            ) : (
+              <>
+                <ShieldCheck className="h-4 w-4" />
+                Register Warranty
+              </>
+            )}
+          </Button>
+        </form>
+      </Form>
 
       {/* Sample Receipts Modal */}
       <Dialog open={showSampleModal} onOpenChange={setShowSampleModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto border-2 border-yellow-300 bg-white shadow-xl">
-          <DialogHeader className="bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-t-lg p-4">
-            <DialogTitle className="text-red-700 font-bold">Sample Receipt Requirements</DialogTitle>
-            <button
-              onClick={() => setShowSampleModal(false)}
-              className="absolute top-1 right-1 p-2  border-gray-300 transition-colors z-10"
-            >
-              <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-3xl border border-gray-200 bg-white p-0 shadow-2xl">
+          <DialogHeader className="border-b border-gray-100 p-6 pb-5">
+            <DialogTitle className="text-lg font-semibold text-[#0A0A0A]">Sample Receipt Requirements</DialogTitle>
           </DialogHeader>
-          
-          <div className="space-y-6 p-4">
-            <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg p-4">
-              <h3 className="font-medium text-red-900 mb-2">Required Information</h3>
-              <p className="text-sm text-red-800">
-                Your receipt must clearly show: <strong>Shop name</strong>, <strong>Tyre quantity</strong>, 
-                <strong>Tyre width size</strong>, <strong>Profile & rim size</strong>, and <strong>Tyre model</strong>.
+
+          <div className="space-y-6 p-6">
+            <div className="rounded-2xl border border-gray-200 bg-[#FAFAFA] p-4">
+              <h3 className="mb-1.5 text-sm font-semibold text-[#0A0A0A]">Required information</h3>
+              <p className="text-sm leading-relaxed text-gray-600">
+                Your receipt must clearly show: <strong className="text-[#0A0A0A]">Shop name</strong>, <strong className="text-[#0A0A0A]">Tyre quantity</strong>,{' '}
+                <strong className="text-[#0A0A0A]">Tyre width size</strong>, <strong className="text-[#0A0A0A]">Profile &amp; rim size</strong>, and <strong className="text-[#0A0A0A]">Tyre model</strong>.
               </p>
             </div>
 
-            <div className="space-y-8">
+            <div className="space-y-6">
               {/* PDF Sample */}
-              <div className="space-y-3">
-                <h4 className="font-medium text-red-700">PDF Receipt Sample</h4>
-                <div className="border border-yellow-300 rounded-lg p-4 bg-yellow-50 text-center">
-                  <p className="text-sm text-yellow-800 mb-3">PDF Receipt Sample</p>
-                  <Button
+              <div className="space-y-2.5">
+                <h4 className="text-sm font-semibold text-[#0A0A0A]">PDF receipt sample</h4>
+                <div className="rounded-2xl border border-gray-200 bg-white p-4 text-center">
+                  <button
                     type="button"
-                    variant="outline"
                     onClick={() => window.open('/app_assets/tayaria_sample_receipt.pdf', '_blank')}
-                    className="bg-white text-black border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                    className={`${secondaryButtonClass} mx-auto`}
                   >
-                    View PDF Sample
-                  </Button>
+                    View PDF sample
+                  </button>
                 </div>
               </div>
 
               {/* Image Sample */}
-              <div className="space-y-3">
-                <h4 className="font-medium text-red-700">Image Receipt Sample</h4>
-                <div className="border border-yellow-300 rounded-lg overflow-hidden">
+              <div className="space-y-2.5">
+                <h4 className="text-sm font-semibold text-[#0A0A0A]">Image receipt sample</h4>
+                <div className="overflow-hidden rounded-2xl border border-gray-200">
                   <img
                     src="/app_assets/tayaria_sample_receipt.jpg"
-                    alt="Sample receipt image"
-                    className="w-full h-auto"
+                    alt="Sample receipt"
+                    className="h-auto w-full"
                   />
                 </div>
               </div>
@@ -636,12 +607,11 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
 
       {/* Terms & Conditions read-only popup */}
       <Dialog open={showTermsPopup} onOpenChange={setShowTermsPopup}>
-        <DialogContent className="bg-white border-2 border-yellow-300 max-h-[80vh] w-[90%] md:w-[900px] max-w-[900px] flex flex-col p-0 shadow-xl">
-          <DialogHeader className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-6 pb-4 rounded-t-lg">
-            <DialogTitle className="text-red-700 text-center text-2xl mb-4 font-bold">Tayaria 360 Warranty Terms &amp; Conditions</DialogTitle>
-            <div className="border-t border-yellow-300 w-full" />
+        <DialogContent className="flex max-h-[80vh] w-[92%] max-w-[820px] flex-col rounded-3xl border border-gray-200 bg-white p-0 shadow-2xl">
+          <DialogHeader className="border-b border-gray-100 p-6 pb-5">
+            <DialogTitle className="text-lg font-semibold text-[#0A0A0A]">Tayaria 360 Warranty Terms &amp; Conditions</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto flex-1 px-6 py-4">
+          <div className="flex-1 overflow-y-auto px-6 py-5">
             <TermsAndConditionsContent />
           </div>
         </DialogContent>
@@ -649,12 +619,11 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
 
       {/* PDPA Policy read-only popup */}
       <Dialog open={showPdpaPopup} onOpenChange={setShowPdpaPopup}>
-        <DialogContent className="bg-white border-2 border-yellow-300 max-h-[80vh] w-[90%] md:w-[900px] max-w-[900px] flex flex-col p-0 shadow-xl">
-          <DialogHeader className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-6 pb-4 rounded-t-lg">
-            <DialogTitle className="text-red-700 text-center text-2xl mb-4 font-bold">PDPA Privacy Policy</DialogTitle>
-            <div className="border-t border-yellow-300 w-full" />
+        <DialogContent className="flex max-h-[80vh] w-[92%] max-w-[820px] flex-col rounded-3xl border border-gray-200 bg-white p-0 shadow-2xl">
+          <DialogHeader className="border-b border-gray-100 p-6 pb-5">
+            <DialogTitle className="text-lg font-semibold text-[#0A0A0A]">PDPA Privacy Policy</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto flex-1 px-6 py-4">
+          <div className="flex-1 overflow-y-auto px-6 py-5">
             <PDPAContent />
           </div>
         </DialogContent>

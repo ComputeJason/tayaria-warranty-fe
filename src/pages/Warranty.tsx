@@ -1,20 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
 import { CheckWarrantyStatus } from '@/components/warranty/CheckWarrantyStatus';
 import { RegisterWarranty } from '@/components/warranty/RegisterWarranty';
 import { testEnvironmentConfig } from '@/utils/envTest';
+import { ShieldCheck, Lock, Clock3 } from 'lucide-react';
+import { COLORS, FONT_STACK, pillClass } from '@/components/warranty/appleTheme';
+
+const trustBadges = [
+  { icon: Lock, label: 'Secure & Private' },
+  { icon: ShieldCheck, label: 'PDPA Compliant' },
+  { icon: Clock3, label: 'Takes about 1 minute' },
+];
 
 export default function Warranty() {
   const [activeTab, setActiveTab] = useState("register");
   const [carPlate, setCarPlate] = useState("");
   const [isPageLoaded, setIsPageLoaded] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
   const location = useLocation();
 
   // Test environment configuration on component mount
@@ -32,104 +36,116 @@ export default function Warranty() {
     }
   }, [location]);
 
-  // Trigger animations on page load
+  // Trigger a gentle entrance animation on page load
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsPageLoaded(true);
-    }, 100); // Small delay to ensure DOM is ready
-    
+    }, 60);
+
     return () => clearTimeout(timer);
   }, []);
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header with Logo and Title */}
-      <div className={`bg-gradient-to-r from-[#fdf100] from-30% md:from-30% from-45% via-yellow-300 to-yellow-500 shadow-lg transition-all duration-1000 ease-out relative ${
-        isPageLoaded 
-          ? 'translate-y-0 opacity-100' 
-          : '-translate-y-full opacity-0'
-      }`}>
-        <div className="container mx-auto px-4 py-6">
-          {/* Mobile Layout: Stacked */}
-          <div className="md:hidden flex flex-col items-start space-y-2">
-            <img 
-              src="/app_assets/tayaria-logo-new.jpg" 
-              alt="Tayaria Logo" 
-              className="h-20 w-auto rounded-sm flex-shrink-0 -ml-4 -mt-8"
-              onError={(e) => {
-                // Fallback chain: new JPG -> old JPG -> PNG
-                const target = e.target as HTMLImageElement;
-                if (target.src.includes('/app_assets/tayaria-logo-new.jpg')) {
-                  target.src = '/app_assets/tayaria-logo.jpg';
-                } else if (target.src.includes('/app_assets/tayaria-logo.jpg')) {
-                  target.src = '/app_assets/tayaria_logo.png';
-                }
-              }}
-            />
-            <div className="w-full text-center">
-              <h1 className="text-xl font-bold text-red-600 leading-tight -mt-3">Tyre Warranty Management</h1>
-              <p className="text-red-700 text-xs mt-1 font-bold">Secure your tyre investment with Tayaria</p>
-            </div>
-          </div>
+    <div
+      className="min-h-screen bg-white"
+      style={{ fontFamily: FONT_STACK }}
+    >
+      {/* Minimal brand bar */}
+      <div className="border-b border-black/[0.06]">
+        <div className="container mx-auto flex items-center px-4 py-4">
+          <img
+            src="/app_assets/tayaria-logo-new.jpg"
+            alt="Tayaria"
+            className="h-8 w-auto rounded-[4px]"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              if (target.src.includes('/app_assets/tayaria-logo-new.jpg')) {
+                target.src = '/app_assets/tayaria-logo.jpg';
+              } else if (target.src.includes('/app_assets/tayaria-logo.jpg')) {
+                target.src = '/app_assets/tayaria_logo.png';
+              }
+            }}
+          />
+        </div>
+      </div>
 
-          {/* Desktop Layout: Side by side */}
-          <div className="hidden md:flex items-center">
-            <img 
-              src="/app_assets/tayaria-logo-new.jpg" 
-              alt="Tayaria Logo" 
-              className="h-24 w-auto rounded-sm flex-shrink-0"
-              onError={(e) => {
-                // Fallback chain: new JPG -> old JPG -> PNG
-                const target = e.target as HTMLImageElement;
-                if (target.src.includes('/app_assets/tayaria-logo-new.jpg')) {
-                  target.src = '/app_assets/tayaria-logo.jpg';
-                } else if (target.src.includes('/app_assets/tayaria-logo.jpg')) {
-                  target.src = '/app_assets/tayaria_logo.png';
-                }
-              }}
-            />
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="text-center">
-                <h1 className="text-3xl font-bold text-red-600 leading-tight">Tyre Warranty Management</h1>
-                <p className="text-red-700 text-sm mt-1 font-bold">Secure your tyre investment with Tayaria</p>
-              </div>
+      {/* Hero */}
+      <div className="relative overflow-hidden">
+        {/* Abstract mesh-gradient wash — decorative only */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: `
+              radial-gradient(560px 420px at 82% -8%, ${COLORS.redTint} 0%, rgba(251,234,232,0) 65%),
+              radial-gradient(480px 360px at 8% 0%, ${COLORS.yellowTint} 0%, rgba(255,246,225,0) 60%)
+            `,
+          }}
+        />
+
+        <div className="container relative mx-auto px-4 pt-16 pb-28 md:pt-24 md:pb-36">
+          <div
+            className={`mx-auto max-w-2xl text-center transition-all duration-700 ease-out ${
+              isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
+            }`}
+          >
+            <span className={`${pillClass} mx-auto`} style={{ color: COLORS.redHover }}>
+              <span
+                className="inline-block h-1.5 w-1.5 rounded-full"
+                style={{ backgroundColor: COLORS.yellow }}
+              />
+              Tayaria 360&deg; Warranty
+            </span>
+
+            <h1
+              className="mt-6 text-[40px] font-extrabold leading-[1.08] tracking-tight sm:text-[52px] md:text-[60px]"
+              style={{ color: COLORS.ink }}
+            >
+              Protect every tyre
+              <br className="hidden sm:block" /> you drive on.
+            </h1>
+
+            <p className="mx-auto mt-5 max-w-md text-[18px] leading-relaxed text-gray-500 md:text-[19px]">
+              Register your purchase in a minute and check your warranty
+              status anytime — no paperwork, no hassle.
+            </p>
+
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5">
+              {trustBadges.map(({ icon: Icon, label }) => (
+                <span key={label} className={pillClass}>
+                  <Icon className="h-3.5 w-3.5" style={{ color: COLORS.red }} />
+                  {label}
+                </span>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-4xl mx-auto">
-          <TabsList 
-            className={`grid w-full grid-cols-2 bg-white border-2 border-yellow-300 p-1 rounded-lg shadow-md transition-all duration-1000 ease-out delay-500 ${
-              isPageLoaded 
-                ? 'translate-x-0 opacity-100' 
-                : 'translate-x-full opacity-0'
-            }`}
-          >
-            <TabsTrigger 
-              value="register" 
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-600 data-[state=active]:to-red-700 data-[state=active]:text-white data-[state=inactive]:text-red-700 data-[state=inactive]:hover:bg-red-50 transition-all duration-300 rounded-md"
-            >
-              Register Warranty
-            </TabsTrigger>
-            <TabsTrigger 
-              value="check" 
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-600 data-[state=active]:to-red-700 data-[state=active]:text-white data-[state=inactive]:text-red-700 data-[state=inactive]:hover:bg-red-50 transition-all duration-300 rounded-md"
-            >
-              Check Warranty Status
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent 
-            value="register" 
-            className={`mt-6 transition-all duration-1000 ease-out delay-800 ${
-              isPageLoaded 
-                ? 'translate-x-0 opacity-100' 
-                : '-translate-x-full opacity-0'
-            }`}
-          >
-            <Card className="p-6 bg-white border-2 border-yellow-200 shadow-lg rounded-xl">
+      {/* Floating card */}
+      <div className="container mx-auto px-4 pb-20">
+        <div
+          className={`mx-auto -mt-20 max-w-3xl rounded-3xl border border-black/[0.06] bg-white/95 p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04),0_24px_64px_-24px_rgba(0,0,0,0.18)] backdrop-blur-sm transition-all duration-700 ease-out md:-mt-24 md:p-10 ${
+            isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
+          }`}
+        >
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
+              <TabsTrigger
+                value="register"
+                className="rounded-lg py-2.5 text-sm font-medium text-gray-500 transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-[#0A0A0A] data-[state=active]:shadow-sm"
+              >
+                Register Warranty
+              </TabsTrigger>
+              <TabsTrigger
+                value="check"
+                className="rounded-lg py-2.5 text-sm font-medium text-gray-500 transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-[#0A0A0A] data-[state=active]:shadow-sm"
+              >
+                Check Warranty Status
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="register" className="mt-8 focus-visible:outline-none">
               <RegisterWarranty
                 onSuccess={(plate) => {
                   setCarPlate(plate);
@@ -140,26 +156,17 @@ export default function Warranty() {
                   });
                 }}
               />
-            </Card>
-          </TabsContent>
-          
-          <TabsContent 
-            value="check" 
-            className={`mt-6 transition-all duration-1000 ease-out delay-800 ${
-              isPageLoaded 
-                ? 'translate-x-0 opacity-100' 
-                : '-translate-x-full opacity-0'
-            }`}
-          >
-            <Card className="p-6 bg-white border-2 border-yellow-200 shadow-lg rounded-xl">
-              <CheckWarrantyStatus 
+            </TabsContent>
+
+            <TabsContent value="check" className="mt-8 focus-visible:outline-none">
+              <CheckWarrantyStatus
                 initialCarPlate={carPlate}
                 onNavigateToRegister={() => setActiveTab("register")}
               />
-            </Card>
-          </TabsContent>
-        </Tabs>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </div>
   );
-} 
+}

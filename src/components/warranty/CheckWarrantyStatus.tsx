@@ -12,7 +12,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +22,8 @@ import { TermsAndConditionsContent } from './TermsAndConditions';
 import { warrantyApi, convertApiWarrantyToFrontend } from '@/services/warrantyApi';
 import { useToast } from "@/components/ui/use-toast";
 import { format } from 'date-fns';
+import { FileSearch, Loader2, ShieldCheck } from 'lucide-react';
+import { COLORS, fieldInputClass, fieldLabelClass, primaryButtonClass, secondaryButtonClass } from './appleTheme';
 
 // Mock data types
 interface Warranty {
@@ -45,6 +46,24 @@ type FormData = z.infer<typeof formSchema>;
 interface CheckWarrantyStatusProps {
   initialCarPlate?: string;
   onNavigateToRegister?: () => void;
+}
+
+function StatusPill({ status }: { status: Warranty['status'] }) {
+  const isActive = status === 'active';
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium capitalize ${
+        isActive
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+          : 'border-gray-200 bg-gray-100 text-gray-500'
+      }`}
+    >
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-gray-400'}`}
+      />
+      {status}
+    </span>
+  );
 }
 
 export function CheckWarrantyStatus({ initialCarPlate, onNavigateToRegister }: CheckWarrantyStatusProps) {
@@ -74,11 +93,11 @@ export function CheckWarrantyStatus({ initialCarPlate, onNavigateToRegister }: C
     }
     setIsLoading(true);
     setHasSearched(true);
-    
+
     try {
       // Call the backend API
       const apiWarranties = await warrantyApi.getWarrantiesByCarPlate(data.carPlate.toUpperCase());
-      
+
       // If null or not an array, treat as no warranties found
       if (!Array.isArray(apiWarranties) || apiWarranties.length === 0) {
         setWarranties([]);
@@ -93,7 +112,7 @@ export function CheckWarrantyStatus({ initialCarPlate, onNavigateToRegister }: C
       // Convert backend format to frontend format
       const frontendWarranties = apiWarranties.map(convertApiWarrantyToFrontend);
       setWarranties(frontendWarranties);
-      
+
     } catch (error) {
       // 4. Hide technical errors, show generic error
       toast({
@@ -109,156 +128,134 @@ export function CheckWarrantyStatus({ initialCarPlate, onNavigateToRegister }: C
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
           <FormField
             control={form.control}
             name="carPlate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-black font-medium">Car Plate</FormLabel>
+                <FormLabel className={fieldLabelClass}>Car Plate</FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="Enter car plate" 
-                    {...field} 
-                    className="bg-white text-black border-gray-300 focus:border-red-500 focus:ring-red-500 transition-colors"
-                  />
+                  <Input placeholder="e.g. SBA1234A" {...field} className={fieldInputClass} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          <Button 
-            type="submit" 
-            className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium py-3 rounded-lg transition-all duration-300 hover:scale-[1.02] shadow-lg" 
-            disabled={isLoading}
-          >
-            {isLoading ? "Checking..." : "Check Status"}
+          <Button type="submit" disabled={isLoading} className={primaryButtonClass}>
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Checking&hellip;
+              </>
+            ) : (
+              <>
+                <FileSearch className="h-4 w-4" />
+                Check Status
+              </>
+            )}
           </Button>
         </form>
       </Form>
 
       {hasSearched && warranties.length > 0 ? (
-        <div className="max-w-2xl mx-auto space-y-4">
-          {/* Warranties Section */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-red-700">Warranties</h2>
-              {onNavigateToRegister && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={onNavigateToRegister}
-                  className="text-xs bg-white text-black border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-colors"
-                >
-                  Register New Warranty
-                </Button>
-              )}
-            </div>
-            {warranties.length > 0 ? (
-              warranties.map((warranty) => (
-                <Card
-                  key={warranty.id}
-                  className={`p-4 transition-all duration-200 shadow-lg border-2 ${
-                    warranty.status === 'active' 
-                      ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-300' 
-                      : 'bg-gray-50 border-gray-300 opacity-60'
-                  }`}
-                >
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div className="text-lg font-semibold text-red-700">
-                        Tayaria Issued Warranty
-                      </div>
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        warranty.status === 'active' 
-                          ? 'bg-green-100 text-green-800 border border-green-300' 
-                          : 'bg-gray-200 text-gray-700 border border-gray-300'
-                      }`}>
-                        {warranty.status}
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm text-gray-700">
-                        <strong className="text-red-700">Purchase Date:</strong> {warranty.purchaseDate ? format(new Date(warranty.purchaseDate), 'dd-MM-yyyy') : ''}
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        <strong className="text-red-700">Valid until:</strong> {warranty.expiryDate ? format(new Date(warranty.expiryDate), 'dd-MM-yyyy') : ''}
-                      </p>
-                    </div>
-                    <div className="flex justify-between items-center pt-2 border-t border-yellow-200">
-                      <p className="text-xs text-gray-500 italic">
-                        *Refer to your receipt or contact your retailer for details of your purchase
-                      </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowTermsModal(true)}
-                        className="bg-white text-black border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-colors"
-                      >
-                        View Terms & Conditions
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              ))
-            ) : (
-              <Card className="p-4 bg-gradient-to-r from-yellow-50 to-yellow-100 border-2 border-yellow-300 shadow-lg">
-                <p className="text-yellow-800 text-center font-medium">No warranties found</p>
-              </Card>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-[#0A0A0A]">Your Warranties</h2>
+            {onNavigateToRegister && (
+              <button
+                type="button"
+                onClick={onNavigateToRegister}
+                className={secondaryButtonClass}
+              >
+                Register New Warranty
+              </button>
             )}
+          </div>
+
+          <div className="space-y-3">
+            {warranties.map((warranty) => (
+              <div
+                key={warranty.id}
+                className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-shadow duration-200 hover:shadow-md"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full"
+                      style={{ backgroundColor: COLORS.redTint }}
+                    >
+                      <ShieldCheck className="h-4 w-4" style={{ color: COLORS.red }} />
+                    </span>
+                    <span className="font-semibold text-[#0A0A0A]">Tayaria Issued Warranty</span>
+                  </div>
+                  <StatusPill status={warranty.status} />
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3 border-t border-gray-100 pt-4 text-sm">
+                  <div>
+                    <p className="text-xs text-gray-400">Purchase Date</p>
+                    <p className="mt-0.5 font-medium text-[#0A0A0A]">
+                      {warranty.purchaseDate ? format(new Date(warranty.purchaseDate), 'dd MMM yyyy') : '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Valid Until</p>
+                    <p className="mt-0.5 font-medium text-[#0A0A0A]">
+                      {warranty.expiryDate ? format(new Date(warranty.expiryDate), 'dd MMM yyyy') : '—'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between gap-3 border-t border-gray-100 pt-4">
+                  <p className="text-xs italic text-gray-400">
+                    Refer to your receipt or contact your retailer for purchase details
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowTermsModal(true)}
+                    className="flex-shrink-0 text-xs font-medium underline decoration-gray-300 underline-offset-4"
+                    style={{ color: COLORS.redHover }}
+                  >
+                    Terms &amp; Conditions
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       ) : hasSearched ? (
-        <div className="max-w-2xl mx-auto space-y-4">
-          <Card className="p-6 bg-gradient-to-r from-yellow-50 to-yellow-100 border-2 border-yellow-300 shadow-lg rounded-xl">
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center">
-                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-red-700 text-lg font-medium mb-2">No matching warranties found</p>
-                <p className="text-yellow-800 text-sm">This Car Plate has no warranties registered</p>
-              </div>
-              {onNavigateToRegister && (
-                <Button
-                  type="button"
-                  onClick={onNavigateToRegister}
-                  className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium py-2 px-6 rounded-lg transition-all duration-300 hover:scale-105 shadow-lg"
-                >
-                  Register New Warranty
-                </Button>
-              )}
-            </div>
-          </Card>
+        <div className="rounded-2xl border border-gray-200 bg-[#FAFAFA] p-10 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm">
+            <FileSearch className="h-6 w-6 text-gray-300" />
+          </div>
+          <p className="mt-4 text-base font-semibold text-[#0A0A0A]">No matching warranties found</p>
+          <p className="mt-1 text-sm text-gray-500">This car plate has no warranties registered yet.</p>
+          {onNavigateToRegister && (
+            <button
+              type="button"
+              onClick={onNavigateToRegister}
+              className={`${primaryButtonClass} mx-auto mt-6 w-auto px-6`}
+            >
+              Register New Warranty
+            </button>
+          )}
         </div>
       ) : null}
 
       {/* Terms and Conditions Modal */}
       <Dialog open={showTermsModal} onOpenChange={setShowTermsModal}>
-        <DialogContent className="bg-white border-2 border-yellow-300 max-h-[80vh] w-[90%] md:w-[900px] max-w-[900px] flex flex-col p-0 shadow-xl">
-          <DialogHeader className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-6 pb-4 rounded-t-lg relative">
-            <DialogTitle className="text-red-700 text-center text-2xl mb-4 font-bold">Tayaria 360 Warranty Terms & Conditions</DialogTitle>
-            <div className="border-t border-yellow-300 w-full" />
-            <button
-              onClick={() => setShowTermsModal(false)}
-              className="absolute top-4 right-4 p-2 rounded-full bg-white border border-gray-300 hover:bg-gray-50 transition-colors"
-            >
-              <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+        <DialogContent className="flex max-h-[80vh] w-[92%] max-w-[820px] flex-col rounded-3xl border border-gray-200 bg-white p-0 shadow-2xl">
+          <DialogHeader className="border-b border-gray-100 p-6 pb-5">
+            <DialogTitle className="text-lg font-semibold text-[#0A0A0A]">Tayaria 360 Warranty Terms &amp; Conditions</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto flex-1 px-6 py-4">
+          <div className="flex-1 overflow-y-auto px-6 py-5">
             <TermsAndConditionsContent />
           </div>
         </DialogContent>
       </Dialog>
     </div>
   );
-} 
+}
