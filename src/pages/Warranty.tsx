@@ -65,16 +65,15 @@ export default function Warranty() {
               }}
             />
             <span
-              className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide"
+              className="text-base font-bold uppercase tracking-wide"
               style={{ color: COLORS.redHover }}
             >
-              <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: COLORS.red }} />
               Tayaria 360&deg; Warranty
             </span>
           </div>
 
-          {/* Desktop: same line as the logo */}
-          <div className="hidden items-center justify-between sm:flex">
+          {/* Desktop: same line as the logo, kicker centered independent of logo width */}
+          <div className="relative hidden items-center sm:flex">
             <img
               src="/app_assets/tayaria-logo-new.jpg"
               alt="Tayaria"
@@ -89,17 +88,16 @@ export default function Warranty() {
               }}
             />
             <span
-              className="inline-flex items-center gap-2 text-base font-bold uppercase tracking-wide md:text-lg"
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-lg font-bold uppercase tracking-wide md:text-xl"
               style={{ color: COLORS.redHover }}
             >
-              <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: COLORS.red }} />
               Tayaria 360&deg; Warranty
             </span>
           </div>
         </div>
 
         {/* Headline */}
-        <div className="container relative mx-auto px-4 pb-24 pt-10 md:pb-32 md:pt-14">
+        <div className="container relative mx-auto px-4 pb-24 pt-6 md:pb-32 md:pt-8">
           <div
             className={`mx-auto max-w-2xl text-center transition-all duration-700 ease-out ${
               isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
