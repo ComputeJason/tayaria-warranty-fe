@@ -6,7 +6,7 @@ import { CheckWarrantyStatus } from '@/components/warranty/CheckWarrantyStatus';
 import { RegisterWarranty } from '@/components/warranty/RegisterWarranty';
 import { testEnvironmentConfig } from '@/utils/envTest';
 import { Clock3 } from 'lucide-react';
-import { COLORS, FONT_STACK, pillClass } from '@/components/warranty/appleTheme';
+import { COLORS, FONT_STACK } from '@/components/warranty/appleTheme';
 
 export default function Warranty() {
   const [activeTab, setActiveTab] = useState("register");
@@ -44,13 +44,24 @@ export default function Warranty() {
       className="min-h-screen bg-white"
       style={{ fontFamily: FONT_STACK }}
     >
-      {/* Minimal brand bar */}
-      <div className="border-b border-black/[0.06]">
-        <div className="container mx-auto flex items-center px-4 py-4">
+      {/* Kicker, above the banner */}
+      <div className="pb-3 pt-6 text-center">
+        <span
+          className="inline-flex items-center gap-2 text-base font-bold uppercase tracking-wide md:text-lg"
+          style={{ color: COLORS.redHover }}
+        >
+          <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: COLORS.yellow }} />
+          Tayaria 360&deg; Warranty
+        </span>
+      </div>
+
+      {/* Brand banner — restored yellow gradient treatment, bigger logo */}
+      <div className="bg-gradient-to-r from-[#fdf100] from-30% via-yellow-300 to-yellow-500 shadow-sm md:from-45%">
+        <div className="container mx-auto flex items-center justify-center px-4 py-5 md:justify-start">
           <img
             src="/app_assets/tayaria-logo-new.jpg"
             alt="Tayaria"
-            className="h-8 w-auto rounded-[4px]"
+            className="h-14 w-auto rounded-[4px] md:h-16"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               if (target.src.includes('/app_assets/tayaria-logo-new.jpg')) {
@@ -83,16 +94,8 @@ export default function Warranty() {
               isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
             }`}
           >
-            <span className={`${pillClass} mx-auto`} style={{ color: COLORS.redHover }}>
-              <span
-                className="inline-block h-1.5 w-1.5 rounded-full"
-                style={{ backgroundColor: COLORS.yellow }}
-              />
-              Tayaria 360&deg; Warranty
-            </span>
-
             <h1
-              className="mt-5 text-[40px] font-extrabold leading-[1.08] tracking-tight sm:text-[52px] md:text-[60px]"
+              className="text-[40px] font-extrabold leading-[1.08] tracking-tight sm:text-[52px] md:text-[60px]"
               style={{ color: COLORS.ink }}
             >
               Protect every tyre
@@ -101,7 +104,7 @@ export default function Warranty() {
 
             <p className="mx-auto mt-5 max-w-md text-[18px] leading-relaxed text-gray-500 md:text-[19px]">
               Register your purchase in a minute and check your warranty
-              status anytime — no paperwork, no hassle.
+              status anytime.
             </p>
           </div>
         </div>
@@ -110,11 +113,11 @@ export default function Warranty() {
       {/* Floating card */}
       <div className="container mx-auto px-4 pb-20">
         <div
-          className={`mx-auto -mt-16 max-w-3xl rounded-3xl border border-black/[0.06] bg-white/95 p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04),0_24px_64px_-24px_rgba(0,0,0,0.18)] backdrop-blur-sm transition-all duration-700 ease-out md:-mt-20 md:p-10 ${
+          className={`mx-auto -mt-16 max-w-3xl rounded-3xl border border-black/[0.06] bg-white/95 px-5 pb-5 pt-4 shadow-[0_2px_8px_rgba(0,0,0,0.04),0_24px_64px_-24px_rgba(0,0,0,0.18)] backdrop-blur-sm transition-all duration-700 ease-out md:-mt-20 md:px-10 md:pb-10 md:pt-6 ${
             isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
           }`}
         >
-          <div className="mb-5 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-400">
+          <div className="mb-4 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-400">
             <Clock3 className="h-3 w-3" />
             Takes about 1 minute
           </div>

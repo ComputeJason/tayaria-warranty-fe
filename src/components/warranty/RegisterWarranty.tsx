@@ -138,6 +138,7 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
   const [showPdpaPopup, setShowPdpaPopup] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState<'forward' | 'back'>('forward');
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const { toast } = useToast();
 
   const today = getTodaySgt();
@@ -311,7 +312,11 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
       <WizardStepper steps={STEPS.map((s) => s.label)} currentStep={currentStep} />
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} onKeyDown={handleFormKeyDown} className="space-y-8">
+        <form
+          onSubmit={form.handleSubmit(onSubmit, () => setSubmitAttempted(true))}
+          onKeyDown={handleFormKeyDown}
+          className="space-y-8"
+        >
           <div key={currentStep} className={transitionClass}>
             <div className="mb-6 flex items-start gap-3">
               <span
@@ -633,7 +638,7 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
                             </span>
                           </label>
                         </div>
-                        <FormMessage />
+                        {submitAttempted && <FormMessage />}
                       </FormItem>
                     )}
                   />
@@ -667,7 +672,7 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
                             </span>
                           </label>
                         </div>
-                        <FormMessage />
+                        {submitAttempted && <FormMessage />}
                       </FormItem>
                     )}
                   />
