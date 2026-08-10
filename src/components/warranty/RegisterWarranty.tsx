@@ -312,8 +312,19 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
       <WizardStepper steps={STEPS.map((s) => s.label)} currentStep={currentStep} />
 
       <Form {...form}>
+        {/* No button in this form ever uses type="submit" (see the final-step button
+            below) — deliberately, to avoid a real bug we hit: when the "Next" button
+            on the receipt step advances currentStep into the last step, React
+            reconciles the nav button in place (same JSX position, no key change) and
+            mutates that same DOM node's type from "button" to "submit" mid-click.
+            Some browsers resolve a button's activation behavior against its type at
+            that later point, so the browser fired a native submit — before the user
+            ever touched the real "Register Warranty" button — which prematurely
+            flagged the form as submitted and surfaced the consent-checkbox errors
+            early. Keeping this onSubmit only as a defensive no-op and driving the
+            actual submit through the button's onClick avoids the type flip entirely. */}
         <form
-          onSubmit={form.handleSubmit(onSubmit, () => setSubmitAttempted(true))}
+          onSubmit={(e) => e.preventDefault()}
           onKeyDown={handleFormKeyDown}
           className="space-y-8"
         >
@@ -693,7 +704,15 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
             )}
 
             {isLastStep ? (
-              <Button type="submit" disabled={isSubmitting} className={cn(primaryButtonClass, 'w-auto px-6')}>
+              <Button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => {
+                  setSubmitAttempted(true);
+                  form.handleSubmit(onSubmit)();
+                }}
+                className={cn(primaryButtonClass, 'w-auto px-6')}
+              >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
