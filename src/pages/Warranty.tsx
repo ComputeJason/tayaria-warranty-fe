@@ -133,9 +133,40 @@ export default function Warranty() {
       </div>
 
       {/* Floating card */}
-      <div className="container mx-auto px-4 pb-20">
+      <div className="container relative mx-auto px-4 pb-20">
+        {/* Faint red topographic line texture, echoing the background flourish on
+            tayaria.com — purely decorative, sits behind the card in the white margins. */}
+        <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full">
+          <defs>
+            <pattern id="warranty-topo" width="220" height="180" patternUnits="userSpaceOnUse">
+              <path
+                d="M-20,20 C 35,60 75,-10 130,30 S 240,60 280,20"
+                fill="none"
+                stroke={COLORS.red}
+                strokeOpacity="0.09"
+                strokeWidth="1.5"
+              />
+              <path
+                d="M-20,80 C 35,120 75,50 130,90 S 240,120 280,80"
+                fill="none"
+                stroke={COLORS.red}
+                strokeOpacity="0.07"
+                strokeWidth="1.5"
+              />
+              <path
+                d="M-20,140 C 35,180 75,110 130,150 S 240,180 280,140"
+                fill="none"
+                stroke={COLORS.red}
+                strokeOpacity="0.05"
+                strokeWidth="1.5"
+              />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#warranty-topo)" />
+        </svg>
+
         <div
-          className={`mx-auto -mt-10 max-w-3xl rounded-3xl border border-black/[0.06] bg-white/95 px-5 pb-5 pt-4 shadow-[0_2px_8px_rgba(0,0,0,0.04),0_24px_64px_-24px_rgba(0,0,0,0.18)] backdrop-blur-sm transition-all duration-700 ease-out md:-mt-14 md:px-10 md:pb-10 md:pt-6 ${
+          className={`relative z-10 mx-auto -mt-10 max-w-3xl rounded-3xl border border-black/[0.06] bg-white/95 px-5 pb-5 pt-4 shadow-[0_2px_8px_rgba(0,0,0,0.04),0_24px_64px_-24px_rgba(0,0,0,0.18)] backdrop-blur-sm transition-all duration-700 ease-out md:-mt-14 md:px-10 md:pb-10 md:pt-6 ${
             isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
           }`}
         >
