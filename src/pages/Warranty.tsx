@@ -54,7 +54,7 @@ export default function Warranty() {
             <img
               src="/app_assets/tayaria-logo-new.jpg"
               alt="Tayaria"
-              className="h-11 w-auto rounded-[4px]"
+              className="h-[66px] w-auto rounded-[4px]"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 if (target.src.includes('/app_assets/tayaria-logo-new.jpg')) {
@@ -77,7 +77,7 @@ export default function Warranty() {
             <img
               src="/app_assets/tayaria-logo-new.jpg"
               alt="Tayaria"
-              className="h-14 w-auto rounded-[4px] md:h-16"
+              className="h-[84px] w-auto rounded-[4px] md:h-[96px]"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 if (target.src.includes('/app_assets/tayaria-logo-new.jpg')) {
