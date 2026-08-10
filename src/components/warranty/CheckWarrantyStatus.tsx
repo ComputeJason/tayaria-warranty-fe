@@ -24,6 +24,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { format } from 'date-fns';
 import { FileSearch, Loader2, ShieldCheck } from 'lucide-react';
 import { COLORS, fieldInputClass, fieldLabelClass, primaryButtonClass, secondaryButtonClass } from './appleTheme';
+import { cn } from '@/lib/utils';
 
 // Mock data types
 interface Warranty {
@@ -237,7 +238,7 @@ export function CheckWarrantyStatus({ initialCarPlate, onNavigateToRegister }: C
             <button
               type="button"
               onClick={onNavigateToRegister}
-              className={`${primaryButtonClass} mx-auto mt-6 w-auto px-6`}
+              className={cn(primaryButtonClass, 'mx-auto mt-6 w-auto px-6')}
             >
               Register New Warranty
             </button>
