@@ -45,7 +45,6 @@ const BRAND_CLAIMS = [
   { brand: 'GT Radial',  approved: 26, rejected: 8  },
   { brand: 'Kumho',      approved: 21, rejected: 8  },
   { brand: 'RoadX',      approved: 16, rejected: 6  },
-  { brand: 'Doublestar', approved: 10, rejected: 4  },
 ];
 
 const SHOP_PERFORMANCE = [

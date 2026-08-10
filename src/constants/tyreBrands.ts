@@ -9,7 +9,6 @@ export const BRANDS = [
   'Goodyear',
   'Continental',
   'Dunlop',
-  'Doublestar',
 ] as const;
 
 export type TyreBrand = typeof BRANDS[number];
@@ -64,16 +63,6 @@ export const BRAND_PATTERNS: Record<string, string[]> = {
     'SU01',
     'H/T02',
     'DU71'
-  ],
-  'Doublestar': [
-    'DS602',
-    'DH03',
-    'DU05',
-    'DL01',
-    'DS01',
-    'DSU02',
-    'DU01',
-    'DSS02'
   ],
   'Kumho': [
     'Ecowing ES31',
