@@ -44,51 +44,62 @@ export default function Warranty() {
       className="min-h-screen bg-white"
       style={{ fontFamily: FONT_STACK }}
     >
-      {/* Kicker, above the banner */}
-      <div className="pb-3 pt-6 text-center">
-        <span
-          className="inline-flex items-center gap-2 text-base font-bold uppercase tracking-wide md:text-lg"
-          style={{ color: COLORS.redHover }}
-        >
-          <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: COLORS.yellow }} />
-          Tayaria 360&deg; Warranty
-        </span>
-      </div>
+      {/* Hero — bold yellow field (matching tayaria.com) with logo + kicker on one row,
+          headline below, and a signature wave transition down into the white body. */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-[#fdf100] from-30% via-yellow-300 to-yellow-500 md:from-45%">
+        {/* Logo + kicker row */}
+        <div className="container relative mx-auto px-4 pt-5 md:pt-6">
+          {/* Mobile: stacked */}
+          <div className="flex flex-col items-center gap-2 sm:hidden">
+            <img
+              src="/app_assets/tayaria-logo-new.jpg"
+              alt="Tayaria"
+              className="h-11 w-auto rounded-[4px]"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                if (target.src.includes('/app_assets/tayaria-logo-new.jpg')) {
+                  target.src = '/app_assets/tayaria-logo.jpg';
+                } else if (target.src.includes('/app_assets/tayaria-logo.jpg')) {
+                  target.src = '/app_assets/tayaria_logo.png';
+                }
+              }}
+            />
+            <span
+              className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide"
+              style={{ color: COLORS.redHover }}
+            >
+              <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: COLORS.red }} />
+              Tayaria 360&deg; Warranty
+            </span>
+          </div>
 
-      {/* Brand banner — restored yellow gradient treatment, bigger logo */}
-      <div className="bg-gradient-to-r from-[#fdf100] from-30% via-yellow-300 to-yellow-500 shadow-sm md:from-45%">
-        <div className="container mx-auto flex items-center justify-center px-4 py-5 md:justify-start">
-          <img
-            src="/app_assets/tayaria-logo-new.jpg"
-            alt="Tayaria"
-            className="h-14 w-auto rounded-[4px] md:h-16"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              if (target.src.includes('/app_assets/tayaria-logo-new.jpg')) {
-                target.src = '/app_assets/tayaria-logo.jpg';
-              } else if (target.src.includes('/app_assets/tayaria-logo.jpg')) {
-                target.src = '/app_assets/tayaria_logo.png';
-              }
-            }}
-          />
+          {/* Desktop: same line as the logo */}
+          <div className="hidden items-center justify-between sm:flex">
+            <img
+              src="/app_assets/tayaria-logo-new.jpg"
+              alt="Tayaria"
+              className="h-14 w-auto rounded-[4px] md:h-16"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                if (target.src.includes('/app_assets/tayaria-logo-new.jpg')) {
+                  target.src = '/app_assets/tayaria-logo.jpg';
+                } else if (target.src.includes('/app_assets/tayaria-logo.jpg')) {
+                  target.src = '/app_assets/tayaria_logo.png';
+                }
+              }}
+            />
+            <span
+              className="inline-flex items-center gap-2 text-base font-bold uppercase tracking-wide md:text-lg"
+              style={{ color: COLORS.redHover }}
+            >
+              <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: COLORS.red }} />
+              Tayaria 360&deg; Warranty
+            </span>
+          </div>
         </div>
-      </div>
 
-      {/* Hero */}
-      <div className="relative overflow-hidden">
-        {/* Abstract mesh-gradient wash — decorative only */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background: `
-              radial-gradient(560px 420px at 82% -8%, ${COLORS.redTint} 0%, rgba(251,234,232,0) 65%),
-              radial-gradient(480px 360px at 8% 0%, ${COLORS.yellowTint} 0%, rgba(255,246,225,0) 60%)
-            `,
-          }}
-        />
-
-        <div className="container relative mx-auto px-4 pt-8 pb-20 md:pt-10 md:pb-28">
+        {/* Headline */}
+        <div className="container relative mx-auto px-4 pb-24 pt-10 md:pb-32 md:pt-14">
           <div
             className={`mx-auto max-w-2xl text-center transition-all duration-700 ease-out ${
               isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
@@ -102,18 +113,31 @@ export default function Warranty() {
               <br className="hidden sm:block" /> you drive on.
             </h1>
 
-            <p className="mx-auto mt-5 max-w-md text-[18px] leading-relaxed text-gray-500 md:text-[19px]">
+            <p className="mx-auto mt-5 max-w-md text-[18px] leading-relaxed md:text-[19px]" style={{ color: '#5B4A00' }}>
               Register your purchase in a minute and check your warranty
               status anytime.
             </p>
           </div>
         </div>
+
+        {/* Signature wave transition into the white body */}
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 1440 100"
+          preserveAspectRatio="none"
+          className="absolute bottom-0 left-0 h-14 w-full text-white md:h-20"
+        >
+          <path
+            d="M0,40 C240,90 480,10 720,45 C960,80 1200,20 1440,50 L1440,100 L0,100 Z"
+            fill="currentColor"
+          />
+        </svg>
       </div>
 
       {/* Floating card */}
       <div className="container mx-auto px-4 pb-20">
         <div
-          className={`mx-auto -mt-16 max-w-3xl rounded-3xl border border-black/[0.06] bg-white/95 px-5 pb-5 pt-4 shadow-[0_2px_8px_rgba(0,0,0,0.04),0_24px_64px_-24px_rgba(0,0,0,0.18)] backdrop-blur-sm transition-all duration-700 ease-out md:-mt-20 md:px-10 md:pb-10 md:pt-6 ${
+          className={`mx-auto -mt-10 max-w-3xl rounded-3xl border border-black/[0.06] bg-white/95 px-5 pb-5 pt-4 shadow-[0_2px_8px_rgba(0,0,0,0.04),0_24px_64px_-24px_rgba(0,0,0,0.18)] backdrop-blur-sm transition-all duration-700 ease-out md:-mt-14 md:px-10 md:pb-10 md:pt-6 ${
             isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
           }`}
         >
