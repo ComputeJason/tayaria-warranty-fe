@@ -5,14 +5,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { CheckWarrantyStatus } from '@/components/warranty/CheckWarrantyStatus';
 import { RegisterWarranty } from '@/components/warranty/RegisterWarranty';
 import { testEnvironmentConfig } from '@/utils/envTest';
-import { ShieldCheck, Lock, Clock3 } from 'lucide-react';
+import { Clock3 } from 'lucide-react';
 import { COLORS, FONT_STACK, pillClass } from '@/components/warranty/appleTheme';
-
-const trustBadges = [
-  { icon: Lock, label: 'Secure & Private' },
-  { icon: ShieldCheck, label: 'PDPA Compliant' },
-  { icon: Clock3, label: 'Takes about 1 minute' },
-];
 
 export default function Warranty() {
   const [activeTab, setActiveTab] = useState("register");
@@ -83,7 +77,7 @@ export default function Warranty() {
           }}
         />
 
-        <div className="container relative mx-auto px-4 pt-16 pb-28 md:pt-24 md:pb-36">
+        <div className="container relative mx-auto px-4 pt-8 pb-20 md:pt-10 md:pb-28">
           <div
             className={`mx-auto max-w-2xl text-center transition-all duration-700 ease-out ${
               isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
@@ -98,7 +92,7 @@ export default function Warranty() {
             </span>
 
             <h1
-              className="mt-6 text-[40px] font-extrabold leading-[1.08] tracking-tight sm:text-[52px] md:text-[60px]"
+              className="mt-5 text-[40px] font-extrabold leading-[1.08] tracking-tight sm:text-[52px] md:text-[60px]"
               style={{ color: COLORS.ink }}
             >
               Protect every tyre
@@ -109,15 +103,6 @@ export default function Warranty() {
               Register your purchase in a minute and check your warranty
               status anytime — no paperwork, no hassle.
             </p>
-
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5">
-              {trustBadges.map(({ icon: Icon, label }) => (
-                <span key={label} className={pillClass}>
-                  <Icon className="h-3.5 w-3.5" style={{ color: COLORS.red }} />
-                  {label}
-                </span>
-              ))}
-            </div>
           </div>
         </div>
       </div>
@@ -125,10 +110,14 @@ export default function Warranty() {
       {/* Floating card */}
       <div className="container mx-auto px-4 pb-20">
         <div
-          className={`mx-auto -mt-20 max-w-3xl rounded-3xl border border-black/[0.06] bg-white/95 p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04),0_24px_64px_-24px_rgba(0,0,0,0.18)] backdrop-blur-sm transition-all duration-700 ease-out md:-mt-24 md:p-10 ${
+          className={`mx-auto -mt-16 max-w-3xl rounded-3xl border border-black/[0.06] bg-white/95 p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04),0_24px_64px_-24px_rgba(0,0,0,0.18)] backdrop-blur-sm transition-all duration-700 ease-out md:-mt-20 md:p-10 ${
             isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
           }`}
         >
+          <div className="mb-5 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-400">
+            <Clock3 className="h-3 w-3" />
+            Takes about 1 minute
+          </div>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
               <TabsTrigger
