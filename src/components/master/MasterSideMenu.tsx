@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, FileText, Menu, LayoutDashboard, UserPlus, ShieldCheck } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, Menu, UserPlus, ShieldCheck } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -47,17 +47,6 @@ const MasterSideMenu: React.FC<MasterSideMenuProps> = ({ onCollapseChange }) => 
         >
           <FileText className="h-5 w-5" />
           {!isCollapsed && <span className="ml-3">Manage Claims</span>}
-        </Link>
-        <Link
-          to="/master/dashboard-new"
-          className={`flex items-center p-3 rounded-lg transition-colors ${
-            location.pathname === '/master/dashboard-new'
-              ? 'bg-tayaria-yellow/10 text-tayaria-yellow'
-              : 'text-gray-400 hover:bg-tayaria-gray/10 hover:text-white'
-          }`}
-        >
-          <LayoutDashboard className="h-5 w-5" />
-          {!isCollapsed && <span className="ml-3">Analytics</span>}
         </Link>
         <Link
           to="/master/create-retail"
