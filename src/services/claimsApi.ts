@@ -1,16 +1,21 @@
 import { getApiUrl } from '@/config/api';
 import { authApi } from '@/services/authApi';
+import type { Warranty } from '@/services/warrantyApi';
+import { normalizeCarPlate } from '@/lib/utils';
 
 // Types matching the backend API
+export interface ClaimTyreDetailInput {
+  size: string;
+  tread_pattern: string;
+}
+
 export interface CreateClaimRequest {
   customer_name: string;
   phone_number: string;
   email?: string;
   car_plate: string;
   brand: string;
-  quantity: number;
-  size: string;
-  tread_pattern: string;
+  tyre_details: ClaimTyreDetailInput[];
 }
 
 export interface ClaimResponse {
@@ -27,8 +32,7 @@ export interface ClaimResponse {
   car_plate: string;
   brand?: string;
   quantity?: number;
-  size?: string;
-  tread_pattern?: string;
+  requested_tyre_details?: { id: string; size: string; tread_pattern: string }[];
   created_at: string;
   updated_at: string;
   supporting_doc_url?: string;
@@ -56,19 +60,15 @@ export const convertFormDataToCreateClaimRequest = (formData: {
   email: string;
   car_plate: string;
   brand: string;
-  quantity: number;
-  size: string;
-  tread_pattern: string;
+  tyres: ClaimTyreDetailInput[];
 }): CreateClaimRequest => {
   return {
     customer_name: formData.customer_name,
     phone_number: formData.phone_number,
     email: formData.email || undefined,
-    car_plate: formData.car_plate.toUpperCase(),
+    car_plate: normalizeCarPlate(formData.car_plate),
     brand: formData.brand,
-    quantity: formData.quantity,
-    size: formData.size,
-    tread_pattern: formData.tread_pattern,
+    tyre_details: formData.tyres,
   };
 };
 
@@ -91,9 +91,10 @@ export const convertApiResponseToFrontendClaim = (apiResponse: ClaimResponse): C
 
 // API Functions
 export const claimsApi = {
-  // Verify a car plate has a valid warranty and fetch its registered brand(s), latest first
-  async verifyCarPlateBrands(carPlate: string): Promise<{ valid: boolean; brands: string[] }> {
-    const response = await fetch(getApiUrl(`admin/warranties/brands/${encodeURIComponent(carPlate.toUpperCase())}`), {
+  // Verify a car plate has a valid warranty and fetch its registered brand(s) (latest first,
+  // deduplicated) plus every valid warranty on file (used to link out to their receipts)
+  async verifyCarPlate(carPlate: string): Promise<{ valid: boolean; brands: string[]; warranties: Warranty[] }> {
+    const response = await fetch(getApiUrl(`admin/warranties/verify/${encodeURIComponent(normalizeCarPlate(carPlate))}`), {
       method: 'GET',
       headers: authApi.getAuthHeaders(),
     });

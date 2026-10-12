@@ -24,7 +24,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { format } from 'date-fns';
 import { FileSearch, Loader2, ShieldCheck } from 'lucide-react';
 import { COLORS, fieldInputClass, fieldLabelClass, primaryButtonClass, secondaryButtonClass } from './appleTheme';
-import { cn } from '@/lib/utils';
+import { cn, normalizeCarPlate } from '@/lib/utils';
 
 // Mock data types
 interface Warranty {
@@ -97,7 +97,7 @@ export function CheckWarrantyStatus({ initialCarPlate, onNavigateToRegister }: C
 
     try {
       // Call the backend API
-      const apiWarranties = await warrantyApi.getWarrantiesByCarPlate(data.carPlate.toUpperCase());
+      const apiWarranties = await warrantyApi.getWarrantiesByCarPlate(normalizeCarPlate(data.carPlate));
 
       // If null or not an array, treat as no warranties found
       if (!Array.isArray(apiWarranties) || apiWarranties.length === 0) {
@@ -248,7 +248,7 @@ export function CheckWarrantyStatus({ initialCarPlate, onNavigateToRegister }: C
 
       {/* Terms and Conditions Modal */}
       <Dialog open={showTermsModal} onOpenChange={setShowTermsModal}>
-        <DialogContent className="flex max-h-[80vh] w-[92%] max-w-[820px] flex-col rounded-3xl border border-gray-200 bg-white p-0 shadow-2xl">
+        <DialogContent className="flex max-h-[80vh] w-[92%] max-w-[820px] flex-col rounded-3xl border border-gray-200 bg-white p-0 shadow-2xl [&>button]:text-gray-400 [&>button:hover]:text-gray-600">
           <DialogHeader className="border-b border-gray-100 p-6 pb-5">
             <DialogTitle className="text-lg font-semibold text-[#0A0A0A]">Tayaria 360 Warranty Terms &amp; Conditions</DialogTitle>
           </DialogHeader>

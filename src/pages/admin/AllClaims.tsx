@@ -4,7 +4,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import AdminHeader from '@/components/admin/AdminHeader';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Plus, ChevronDown, ChevronUp, ArrowUpDown, Loader2 } from 'lucide-react';
+import { Search, Plus, ChevronDown, ChevronUp, ArrowUpDown, Loader2, FileText } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import {
   Dialog,
@@ -32,11 +32,13 @@ import {
   claimsApi,
   convertFormDataToCreateClaimRequest,
   convertApiResponseToFrontendClaim,
-  type Claim
+  type Claim,
+  type ClaimTyreDetailInput
 } from '@/services/claimsApi';
+import { warrantyApi, type Warranty } from '@/services/warrantyApi';
 import { useAuth } from '@/contexts/AuthContext';
 import { getApiUrl } from '@/config/api';
-import { getTreadPatternsForBrand } from '@/constants/tyreBrands';
+import { BRANDS, getTreadPatternsForBrand } from '@/constants/tyreBrands';
 
 // Claims interface and mock data are now imported from claimsApi service
 
@@ -62,14 +64,12 @@ const AllClaims = () => {
   const [createStep, setCreateStep] = useState<1 | 2>(1);
   const [verifiedCarPlate, setVerifiedCarPlate] = useState<string | null>(null);
   const [verifiedBrands, setVerifiedBrands] = useState<string[]>([]);
+  const [verifiedWarranties, setVerifiedWarranties] = useState<Warranty[]>([]);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState<string | null>(null);
-  const [tyreFormData, setTyreFormData] = useState({
-    brand: '',
-    quantity: 1,
-    size: '',
-    tread_pattern: '',
-  });
+  const [tyreBrand, setTyreBrand] = useState('');
+  const [tyreQuantity, setTyreQuantity] = useState(1);
+  const [tyres, setTyres] = useState<ClaimTyreDetailInput[]>([{ size: '', tread_pattern: '' }]);
 
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
@@ -125,10 +125,13 @@ const AllClaims = () => {
       email: '',
       car_plate: ''
     });
-    setTyreFormData({ brand: '', quantity: 1, size: '', tread_pattern: '' });
+    setTyreBrand('');
+    setTyreQuantity(1);
+    setTyres([{ size: '', tread_pattern: '' }]);
     setCreateStep(1);
     setVerifiedCarPlate(null);
     setVerifiedBrands([]);
+    setVerifiedWarranties([]);
     setVerifyError(null);
   };
 
@@ -139,25 +142,69 @@ const AllClaims = () => {
     setVerifyError(null);
 
     try {
-      const result = await claimsApi.verifyCarPlateBrands(formData.car_plate);
+      const result = await claimsApi.verifyCarPlate(formData.car_plate);
       if (!result.valid || result.brands.length === 0) {
         setVerifyError('No warranties tagged to entered car plate');
         setVerifiedCarPlate(null);
         setVerifiedBrands([]);
+        setVerifiedWarranties([]);
         return;
       }
 
       setVerifiedBrands(result.brands);
+      setVerifiedWarranties(result.warranties);
       setVerifiedCarPlate(formData.car_plate);
-      // Default to the latest brand (already sorted latest-first by the backend)
-      setTyreFormData(prev => ({ ...prev, brand: result.brands[0], tread_pattern: '' }));
+      // Only real, recognized brands count - warranties registered before this field existed are
+      // backfilled as "Unknown", which isn't a valid claim brand and shouldn't narrow the choices.
+      const recognized = result.brands.filter((b) => (BRANDS as readonly string[]).includes(b));
+      // Default to the latest recognized brand (already sorted latest-first by the backend). If
+      // none of the detected brands are recognized, leave it blank - the dropdown will fall back
+      // to showing every brand, and the dealer picks the real one themselves (they can see the tyre).
+      setTyreBrand(recognized[0] || '');
     } catch (error) {
       console.error('Failed to verify car plate:', error);
       setVerifyError(error instanceof Error ? error.message : 'Failed to verify car plate');
       setVerifiedCarPlate(null);
       setVerifiedBrands([]);
+      setVerifiedWarranties([]);
     } finally {
       setIsVerifying(false);
+    }
+  };
+
+  // Resize the per-tyre size/pattern rows to match the selected quantity, without disturbing
+  // rows that are kept: shrinking drops only the trailing rows, growing appends fresh blank
+  // ones, and everything already filled in stays exactly as entered.
+  const handleTyreQuantityChange = (quantity: number) => {
+    setTyreQuantity(quantity);
+    setTyres(prev => {
+      if (quantity <= prev.length) {
+        return prev.slice(0, quantity);
+      }
+      const additional = Array.from({ length: quantity - prev.length }, () => ({ size: '', tread_pattern: '' }));
+      return [...prev, ...additional];
+    });
+  };
+
+  const handleTyreDetailChange = (index: number, field: keyof ClaimTyreDetailInput, value: string) => {
+    setTyres(prev => prev.map((tyre, i) => (i === index ? { ...tyre, [field]: value } : tyre)));
+  };
+
+  const isTyreDetailsComplete = () => {
+    return tyres.every(tyre => tyre.size.trim() !== '' && tyre.tread_pattern.trim() !== '');
+  };
+
+  const handleViewInvoice = async (warrantyId: string) => {
+    try {
+      const { receipt_url } = await warrantyApi.getReceiptUrl(warrantyId);
+      window.open(receipt_url, '_blank');
+    } catch (error) {
+      console.error('Failed to fetch invoice URL:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch invoice. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -175,10 +222,10 @@ const AllClaims = () => {
       return;
     }
 
-    if (!tyreFormData.brand || !tyreFormData.size.trim() || !tyreFormData.tread_pattern) {
+    if (!tyreBrand || !isTyreDetailsComplete()) {
       toast({
         title: 'Validation Error',
-        description: 'Please fill in quantity, size and tread pattern.',
+        description: 'Please fill in size and tread pattern for every tyre.',
         variant: 'destructive',
       });
       return;
@@ -188,7 +235,7 @@ const AllClaims = () => {
 
     try {
       // Convert form data to API request format
-      const apiRequest = convertFormDataToCreateClaimRequest({ ...formData, ...tyreFormData });
+      const apiRequest = convertFormDataToCreateClaimRequest({ ...formData, brand: tyreBrand, tyres });
 
       // Create claim via API
       const apiResponse = await claimsApi.createClaim(apiRequest);
@@ -348,6 +395,12 @@ const AllClaims = () => {
       });
     }
   };
+
+  // Only real, recognized brands narrow the dropdown - "Unknown" (legacy warranties backfilled
+  // before this field existed) doesn't count, so if every detected brand is unrecognized, fall
+  // back to showing the full brand list instead of an effectively-empty one.
+  const recognizedBrands = verifiedBrands.filter((b) => (BRANDS as readonly string[]).includes(b));
+  const brandOptions = recognizedBrands.length > 0 ? recognizedBrands : BRANDS;
 
   return (
     <AdminLayout>
@@ -668,6 +721,9 @@ const AllClaims = () => {
                   <label htmlFor="car_plate" className="block text-sm font-medium text-gray-600 mb-1">
                     Car Plate *
                   </label>
+                  {!(verifiedCarPlate === formData.car_plate && verifiedBrands.length > 0) && (
+                    <p className="text-xs text-gray-500 mb-1">Must verify car plate to continue.</p>
+                  )}
                   <div className="flex items-center gap-2">
                     <Input
                       id="car_plate"
@@ -703,14 +759,14 @@ const AllClaims = () => {
                       Tyre Brand *
                     </label>
                     <Select
-                      value={tyreFormData.brand}
-                      onValueChange={(value) => setTyreFormData(prev => ({ ...prev, brand: value, tread_pattern: '' }))}
+                      value={tyreBrand}
+                      onValueChange={(value) => setTyreBrand(value)}
                     >
                       <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                         <SelectValue placeholder="Select brand" />
                       </SelectTrigger>
                       <SelectContent className="bg-white border-gray-300">
-                        {verifiedBrands.map((brand) => (
+                        {brandOptions.map((brand) => (
                           <SelectItem key={brand} value={brand} className="text-gray-900 hover:bg-gray-50 focus:bg-gray-50">
                             {brand}
                           </SelectItem>
@@ -736,7 +792,7 @@ const AllClaims = () => {
                       !verifiedCarPlate ||
                       verifiedCarPlate !== formData.car_plate ||
                       verifiedBrands.length === 0 ||
-                      !tyreFormData.brand
+                      !tyreBrand
                     }
                     className="bg-green-600 hover:bg-green-700 text-gray-900"
                   >
@@ -745,24 +801,54 @@ const AllClaims = () => {
                 </DialogFooter>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1">
                     Tyre Brand
                   </label>
                   <Input
-                    value={tyreFormData.brand}
+                    value={tyreBrand}
                     disabled
                     className="bg-gray-100 border-gray-300 text-gray-900"
                   />
                 </div>
+
+                {verifiedWarranties.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">
+                      Invoices on file for {formData.car_plate}
+                    </label>
+                    <div className="space-y-1">
+                      {verifiedWarranties.map((warranty) => {
+                        const purchasedOn = `purchased ${new Date(warranty.purchase_date).toLocaleDateString('en-GB')}`;
+                        const label = (BRANDS as readonly string[]).includes(warranty.brand)
+                          ? `${warranty.brand} - ${purchasedOn}`
+                          : purchasedOn;
+                        return (
+                          <Button
+                            key={warranty.id}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewInvoice(warranty.id)}
+                            className="w-full justify-start bg-white text-gray-900 border-gray-300 hover:bg-gray-50"
+                          >
+                            <FileText className="mr-2 h-4 w-4" />
+                            {label}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1">
                     Quantity Claiming *
                   </label>
                   <Select
-                    value={tyreFormData.quantity.toString()}
-                    onValueChange={(value) => setTyreFormData(prev => ({ ...prev, quantity: parseInt(value) }))}
+                    value={tyreQuantity.toString()}
+                    onValueChange={(value) => handleTyreQuantityChange(parseInt(value))}
                   >
                     <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                       <SelectValue />
@@ -776,39 +862,47 @@ const AllClaims = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <label htmlFor="size" className="block text-sm font-medium text-gray-600 mb-1">
-                    Size *
-                  </label>
-                  <Input
-                    id="size"
-                    value={tyreFormData.size}
-                    onChange={(e) => setTyreFormData(prev => ({ ...prev, size: e.target.value }))}
-                    placeholder="e.g., 205/55R16"
-                    className="bg-white border-gray-300 text-gray-900"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">
-                    Tread Pattern *
-                  </label>
-                  <Select
-                    value={tyreFormData.tread_pattern}
-                    onValueChange={(value) => setTyreFormData(prev => ({ ...prev, tread_pattern: value }))}
-                  >
-                    <SelectTrigger className="bg-white border-gray-300 text-gray-900">
-                      <SelectValue placeholder="Select tread pattern" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border-gray-300">
-                      {getTreadPatternsForBrand(tyreFormData.brand).map((pattern) => (
-                        <SelectItem key={pattern} value={pattern} className="text-gray-900 hover:bg-gray-50 focus:bg-gray-50">
-                          {pattern}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+
+                {tyres.map((tyre, index) => (
+                  <div key={index} className="border border-gray-200 rounded-lg p-3 space-y-3">
+                    <p className="text-sm font-semibold text-gray-900">Tyre {index + 1}</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                          Size *
+                        </label>
+                        <Input
+                          value={tyre.size}
+                          onChange={(e) => handleTyreDetailChange(index, 'size', e.target.value)}
+                          placeholder="e.g., 205/55R16"
+                          className="bg-white border-gray-300 text-gray-900"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                          Tread Pattern *
+                        </label>
+                        <Select
+                          value={tyre.tread_pattern}
+                          onValueChange={(value) => handleTyreDetailChange(index, 'tread_pattern', value)}
+                        >
+                          <SelectTrigger className="bg-white border-gray-300 text-gray-900">
+                            <SelectValue placeholder="Select pattern" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white border-gray-300">
+                            {getTreadPatternsForBrand(tyreBrand).map((pattern) => (
+                              <SelectItem key={pattern} value={pattern} className="text-gray-900 hover:bg-gray-50 focus:bg-gray-50">
+                                {pattern}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
                 <DialogFooter>
                   <Button
                     type="button"
@@ -822,7 +916,7 @@ const AllClaims = () => {
                   <Button
                     type="submit"
                     className="bg-green-600 hover:bg-green-700 text-gray-900"
-                    disabled={isSubmitting || !tyreFormData.size.trim() || !tyreFormData.tread_pattern}
+                    disabled={isSubmitting || !isTyreDetailsComplete()}
                   >
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {isSubmitting ? 'Creating...' : 'Create Claim'}

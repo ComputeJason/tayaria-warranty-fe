@@ -163,13 +163,13 @@ export default function Warranty() {
 						<TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
 							<TabsTrigger
 								value="register"
-								className="rounded-lg py-2.5 text-sm font-medium text-gray-500 transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-[#0A0A0A] data-[state=active]:shadow-sm"
+								className="whitespace-normal rounded-lg px-2 py-2.5 text-center text-[13px] font-medium leading-snug text-gray-500 transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-[#0A0A0A] data-[state=active]:shadow-sm sm:whitespace-nowrap sm:px-3 sm:text-sm"
 							>
 								Register Warranty
 							</TabsTrigger>
 							<TabsTrigger
 								value="check"
-								className="rounded-lg py-2.5 text-sm font-medium text-gray-500 transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-[#0A0A0A] data-[state=active]:shadow-sm"
+								className="whitespace-normal rounded-lg px-2 py-2.5 text-center text-[13px] font-medium leading-snug text-gray-500 transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-[#0A0A0A] data-[state=active]:shadow-sm sm:whitespace-nowrap sm:px-3 sm:text-sm"
 							>
 								Check Warranty Status
 							</TabsTrigger>

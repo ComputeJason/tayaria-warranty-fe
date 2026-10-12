@@ -83,6 +83,10 @@ const ManageClaims = () => {
   const [loadingReceipt, setLoadingReceipt] = useState(false);
   const [exportingWarranties, setExportingWarranties] = useState(false);
   const [exportingClaims, setExportingClaims] = useState(false);
+  // Optional export date range filter, shared by both the warranties and claims export -
+  // blank means "export everything" on that side.
+  const [exportFrom, setExportFrom] = useState('');
+  const [exportTo, setExportTo] = useState('');
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -456,19 +460,23 @@ const ManageClaims = () => {
     }
   };
 
-  // Handle tyre quantity change
+  // Resize the tyre rows to match the selected quantity, without disturbing rows that are
+  // kept: shrinking drops only the trailing rows, growing appends fresh default ones, and
+  // everything already filled in (or prefilled from the dealer) stays exactly as it was.
   const handleTyreQuantityChange = (quantity: number) => {
     setTyreQuantity(quantity);
-    const newTyreDetails: TyreDetail[] = [];
-    for (let i = 0; i < quantity; i++) {
-      newTyreDetails.push({
-        id: (i + 1).toString(),
+    setTyreDetails(prev => {
+      if (quantity <= prev.length) {
+        return prev.slice(0, quantity);
+      }
+      const additional: TyreDetail[] = Array.from({ length: quantity - prev.length }, (_, i) => ({
+        id: (prev.length + i + 1).toString(),
         brand: 'Pirelli',
         size: '',
         tread_pattern: 'Cinturato P7'
-      });
-    }
-    setTyreDetails(newTyreDetails);
+      }));
+      return [...prev, ...additional];
+    });
   };
 
   // Handle tyre detail change
@@ -499,13 +507,14 @@ const ManageClaims = () => {
   // Prefill the accept tyre form from what the dealer already entered on the claim, if present.
   // Falls back to the default empty form for claims created before this data existed.
   const prefillTyreFormFromClaim = (claim: MasterClaim) => {
-    if (claim.brand && claim.quantity && claim.size && claim.tread_pattern) {
-      setTyreQuantity(claim.quantity);
-      const prefilled: TyreDetail[] = Array.from({ length: claim.quantity }, (_, i) => ({
+    if (claim.brand && claim.requested_tyre_details && claim.requested_tyre_details.length > 0) {
+      setTyreQuantity(claim.requested_tyre_details.length);
+      // Brand is shared across all tyres in the dealer's request; size/pattern are per-tyre.
+      const prefilled: TyreDetail[] = claim.requested_tyre_details.map((td, i) => ({
         id: (i + 1).toString(),
         brand: claim.brand!,
-        size: claim.size!,
-        tread_pattern: claim.tread_pattern!,
+        size: td.size,
+        tread_pattern: td.tread_pattern,
       }));
       setTyreDetails(prefilled);
     } else {
@@ -513,19 +522,22 @@ const ManageClaims = () => {
     }
   };
 
-  // Handle reject tyre quantity change
+  // Resize the reject-flow tyre rows to match the selected quantity, same additive/
+  // non-destructive behavior as the accept flow's handleTyreQuantityChange above.
   const handleRejectTyreQuantityChange = (quantity: number) => {
     setRejectTyreQuantity(quantity);
-    const newTyreDetails: TyreDetail[] = [];
-    for (let i = 0; i < quantity; i++) {
-      newTyreDetails.push({
-        id: (i + 1).toString(),
+    setRejectTyreDetails(prev => {
+      if (quantity <= prev.length) {
+        return prev.slice(0, quantity);
+      }
+      const additional: TyreDetail[] = Array.from({ length: quantity - prev.length }, (_, i) => ({
+        id: (prev.length + i + 1).toString(),
         brand: 'Pirelli',
         size: '',
         tread_pattern: 'Cinturato P7'
-      });
-    }
-    setRejectTyreDetails(newTyreDetails);
+      }));
+      return [...prev, ...additional];
+    });
   };
 
   // Handle reject tyre detail change
@@ -691,11 +703,29 @@ const ManageClaims = () => {
     }
   };
 
-  // Handle export all warranties
+  // Builds "?from=...&to=..." from whichever of the two dates are set, or '' if neither is.
+  const buildDateRangeQuery = (from: string, to: string) => {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const qs = params.toString();
+    return qs ? `?${qs}` : '';
+  };
+
+  // Mirrors the backend's exportFilename naming so the downloaded file's name always reflects
+  // whatever range (if any) was actually applied.
+  const buildExportFilename = (base: string, from: string, to: string) => {
+    if (!from && !to) return `${base}.csv`;
+    if (!from) return `${base}_up_to_${to}.csv`;
+    if (!to) return `${base}_from_${from}.csv`;
+    return `${base}_${from}_to_${to}.csv`;
+  };
+
+  // Handle export warranties (optionally scoped to the shared exportFrom/exportTo range)
   const handleExportWarranties = async () => {
     setExportingWarranties(true);
     try {
-      const response = await fetch(getApiUrl('master/export/warranties'), {
+      const response = await fetch(getApiUrl(`master/export/warranties${buildDateRangeQuery(exportFrom, exportTo)}`), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('masterToken')}`,
@@ -709,12 +739,12 @@ const ManageClaims = () => {
 
       // Get the blob from the response
       const blob = await response.blob();
-      
+
       // Create a download link and trigger it
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'warranties.csv';
+      a.download = buildExportFilename('warranties', exportFrom, exportTo);
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -732,11 +762,11 @@ const ManageClaims = () => {
     }
   };
 
-  // Handle export all claims
+  // Handle export claims (optionally scoped to the shared exportFrom/exportTo range)
   const handleExportClaims = async () => {
     setExportingClaims(true);
     try {
-      const response = await fetch(getApiUrl('master/export/claims'), {
+      const response = await fetch(getApiUrl(`master/export/claims${buildDateRangeQuery(exportFrom, exportTo)}`), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('masterToken')}`,
@@ -750,12 +780,12 @@ const ManageClaims = () => {
 
       // Get the blob from the response
       const blob = await response.blob();
-      
+
       // Create a download link and trigger it
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'claims.csv';
+      a.download = buildExportFilename('claims', exportFrom, exportTo);
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -973,55 +1003,77 @@ const ManageClaims = () => {
           </div>
         </div>
 
-        <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-4">
-          <div className="flex items-center justify-between">
-            <TabsList className="bg-tayaria-darkgray">
-              <TabsTrigger value="unacknowledged" className="data-[state=active]:bg-tayaria-yellow data-[state=active]:text-black">
-                Unacknowledged
-              </TabsTrigger>
-              <TabsTrigger value="pending" className="data-[state=active]:bg-tayaria-yellow data-[state=active]:text-black">
-                Pending
-              </TabsTrigger>
-              <TabsTrigger value="history" className="data-[state=active]:bg-tayaria-yellow data-[state=active]:text-black">
-                History
-              </TabsTrigger>
-            </TabsList>
-            
-            <div className="flex gap-3">
-              <Button
-                onClick={handleExportWarranties}
-                disabled={exportingWarranties}
-                className="bg-green-500 hover:bg-green-600 text-white"
-              >
-                {exportingWarranties ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Exporting...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4 mr-2" />
-                    Export All Warranties
-                  </>
-                )}
-              </Button>
-              <Button
-                onClick={handleExportClaims}
-                disabled={exportingClaims}
-                className="bg-green-500 hover:bg-green-600 text-white"
-              >
-                {exportingClaims ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Exporting...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4 mr-2" />
-                    Export All Claims
-                  </>
-                )}
-              </Button>
+        <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-3">
+          <TabsList className="bg-tayaria-darkgray">
+            <TabsTrigger value="unacknowledged" className="data-[state=active]:bg-tayaria-yellow data-[state=active]:text-black">
+              Unacknowledged
+            </TabsTrigger>
+            <TabsTrigger value="pending" className="data-[state=active]:bg-tayaria-yellow data-[state=active]:text-black">
+              Pending
+            </TabsTrigger>
+            <TabsTrigger value="history" className="data-[state=active]:bg-tayaria-yellow data-[state=active]:text-black">
+              History
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Export controls: one shared date range applies to both exports below */}
+          <div className="flex justify-end">
+            <div className="flex flex-col gap-2 rounded-lg border border-tayaria-gray bg-tayaria-darkgray p-3">
+              <p className="text-[11px] text-gray-500">Leave From/To blank to export everything.</p>
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] text-gray-400">From</label>
+                  <Input
+                    type="date"
+                    value={exportFrom}
+                    onChange={(e) => setExportFrom(e.target.value)}
+                    className="h-8 w-[136px] border-tayaria-gray bg-tayaria-gray text-xs text-white [color-scheme:dark]"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] text-gray-400">To</label>
+                  <Input
+                    type="date"
+                    value={exportTo}
+                    onChange={(e) => setExportTo(e.target.value)}
+                    className="h-8 w-[136px] border-tayaria-gray bg-tayaria-gray text-xs text-white [color-scheme:dark]"
+                  />
+                </div>
+                <Button
+                  onClick={handleExportWarranties}
+                  disabled={exportingWarranties}
+                  className="h-8 bg-green-500 hover:bg-green-600 text-white"
+                >
+                  {exportingWarranties ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Exporting...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Warranties
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={handleExportClaims}
+                  disabled={exportingClaims}
+                  className="h-8 bg-green-500 hover:bg-green-600 text-white"
+                >
+                  {exportingClaims ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Exporting...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Claims
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
 

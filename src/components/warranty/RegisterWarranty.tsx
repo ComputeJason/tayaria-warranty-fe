@@ -50,7 +50,7 @@ import { TermsAndConditionsContent } from './TermsAndConditions';
 import { PDPAContent } from './PDPAContent';
 import { WizardStepper } from './WizardStepper';
 import { COLORS, fieldInputClass, fieldLabelClass, primaryButtonClass, secondaryButtonClass } from './appleTheme';
-import { cn } from '@/lib/utils';
+import { cn, normalizeCarPlate } from '@/lib/utils';
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -277,12 +277,12 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
       formDataToSend.append('phone_number', data.contactNumber);
       formDataToSend.append('email', data.email || '');
       formDataToSend.append('purchase_date', new Date(data.purchaseDate).toISOString());
-      formDataToSend.append('car_plate', data.carPlate.toUpperCase());
+      formDataToSend.append('car_plate', normalizeCarPlate(data.carPlate));
       formDataToSend.append('brand', data.brand);
       formDataToSend.append('receipt', uploadedFile);
 
       await warrantyApi.registerWarranty(formDataToSend);
-      onSuccess(data.carPlate.toUpperCase());
+      onSuccess(normalizeCarPlate(data.carPlate));
     } catch (error) {
       console.error("Error registering warranty:", error);
       toast({
@@ -452,7 +452,16 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
                       <FormLabel className={fieldLabelClass}>Tyre Brand</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select
+                        onValueChange={(value) => {
+                          // Clear the "please select a brand" error synchronously on selection,
+                          // rather than relying solely on RHF's async re-validate-on-change —
+                          // this guarantees the message never lingers after a value is chosen.
+                          field.onChange(value);
+                          form.clearErrors('brand');
+                        }}
+                        value={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger className={fieldInputClass}>
                             <SelectValue placeholder="Select tyre brand" />
@@ -737,7 +746,7 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
 
       {/* Sample Receipts Modal */}
       <Dialog open={showSampleModal} onOpenChange={setShowSampleModal}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-3xl border border-gray-200 bg-white p-0 shadow-2xl">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-3xl border border-gray-200 bg-white p-0 shadow-2xl [&>button]:text-gray-400 [&>button:hover]:text-gray-600">
           <DialogHeader className="border-b border-gray-100 p-6 pb-5">
             <DialogTitle className="text-lg font-semibold text-[#0A0A0A]">Sample Receipt Requirements</DialogTitle>
           </DialogHeader>
@@ -784,7 +793,7 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
 
       {/* Terms & Conditions read-only popup */}
       <Dialog open={showTermsPopup} onOpenChange={setShowTermsPopup}>
-        <DialogContent className="flex max-h-[80vh] w-[92%] max-w-[820px] flex-col rounded-3xl border border-gray-200 bg-white p-0 shadow-2xl">
+        <DialogContent className="flex max-h-[80vh] w-[92%] max-w-[820px] flex-col rounded-3xl border border-gray-200 bg-white p-0 shadow-2xl [&>button]:text-gray-400 [&>button:hover]:text-gray-600">
           <DialogHeader className="border-b border-gray-100 p-6 pb-5">
             <DialogTitle className="text-lg font-semibold text-[#0A0A0A]">Tayaria 360 Warranty Terms &amp; Conditions</DialogTitle>
           </DialogHeader>
@@ -796,7 +805,7 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
 
       {/* PDPA Policy read-only popup */}
       <Dialog open={showPdpaPopup} onOpenChange={setShowPdpaPopup}>
-        <DialogContent className="flex max-h-[80vh] w-[92%] max-w-[820px] flex-col rounded-3xl border border-gray-200 bg-white p-0 shadow-2xl">
+        <DialogContent className="flex max-h-[80vh] w-[92%] max-w-[820px] flex-col rounded-3xl border border-gray-200 bg-white p-0 shadow-2xl [&>button]:text-gray-400 [&>button:hover]:text-gray-600">
           <DialogHeader className="border-b border-gray-100 p-6 pb-5">
             <DialogTitle className="text-lg font-semibold text-[#0A0A0A]">PDPA Privacy Policy</DialogTitle>
           </DialogHeader>
