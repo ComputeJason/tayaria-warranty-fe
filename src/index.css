@@ -46,6 +46,20 @@
     @apply bg-tayaria-black text-foreground;
     background-color: #0A0A0A;
   }
+
+  /* iOS Safari renders its own native date control with an intrinsic minimum width (driven by
+     the formatted date text + calendar icon) that plain width/grid CSS doesn't override on its
+     own - this resets that native appearance so it actually respects the layout around it. */
+  input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+    max-width: 100%;
+    display: block;
+  }
+  input[type="date"]::-webkit-date-and-time-value {
+    text-align: left;
+  }
 }
 
 @layer components {

@@ -401,7 +401,7 @@ export function RegisterWarranty({ onSuccess }: RegisterWarrantyProps) {
                   control={form.control}
                   name="purchaseDate"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="min-w-0">
                       <FormLabel className={fieldLabelClass}>Purchase Date</FormLabel>
                       <FormControl>
                         <Input
