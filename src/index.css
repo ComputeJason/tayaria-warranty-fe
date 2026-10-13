@@ -42,10 +42,6 @@
     @apply border-border;
   }
 
-  html, body {
-    overflow-x: hidden;
-  }
-
   body {
     @apply bg-tayaria-black text-foreground;
     background-color: #0A0A0A;
