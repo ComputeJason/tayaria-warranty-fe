@@ -42,13 +42,12 @@
     @apply border-border;
   }
 
+  html, body {
+    overflow-x: hidden;
+  }
+
   body {
     @apply bg-tayaria-black text-foreground;
-    background-image: url('/lovable-uploads/d08f7093-df56-4967-a199-cc7639923208.png');
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
-    background-repeat: no-repeat;
     background-color: #0A0A0A;
   }
 }

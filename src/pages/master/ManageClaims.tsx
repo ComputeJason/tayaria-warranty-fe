@@ -88,6 +88,34 @@ const ManageClaims = () => {
   const [exportFrom, setExportFrom] = useState('');
   const [exportTo, setExportTo] = useState('');
 
+  // Earliest date worth filtering by - mirrors the backend's own default (handlers/export.go).
+  const EARLIEST_EXPORT_DATE = '2025-08-01';
+
+  const getTodayDateString = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Filling in just one side of the range pre-fills the other with a sensible default, instead
+  // of leaving it open ended - mirrors the backend's own defaulting so behavior stays consistent
+  // even if the API is ever hit directly.
+  const handleExportFromChange = (value: string) => {
+    setExportFrom(value);
+    if (value && !exportTo) {
+      setExportTo(getTodayDateString());
+    }
+  };
+
+  const handleExportToChange = (value: string) => {
+    setExportTo(value);
+    if (value && !exportFrom) {
+      setExportFrom(EARLIEST_EXPORT_DATE);
+    }
+  };
+
   const { toast } = useToast();
   const navigate = useNavigate();
   const { signOut } = useAuth();
@@ -1026,7 +1054,7 @@ const ManageClaims = () => {
                   <Input
                     type="date"
                     value={exportFrom}
-                    onChange={(e) => setExportFrom(e.target.value)}
+                    onChange={(e) => handleExportFromChange(e.target.value)}
                     className="h-8 w-[136px] border-tayaria-gray bg-tayaria-gray text-xs text-white [color-scheme:dark]"
                   />
                 </div>
@@ -1035,7 +1063,7 @@ const ManageClaims = () => {
                   <Input
                     type="date"
                     value={exportTo}
-                    onChange={(e) => setExportTo(e.target.value)}
+                    onChange={(e) => handleExportToChange(e.target.value)}
                     className="h-8 w-[136px] border-tayaria-gray bg-tayaria-gray text-xs text-white [color-scheme:dark]"
                   />
                 </div>
