@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { TooltipProps } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,19 @@ import { fmtInt } from './format';
 const WARRANTY_COLOR = '#FFA500';
 const CLAIM_COLOR = '#60A5FA';
 const SYNC_ID = 'dashboard-trend';
+const AVERAGE_COLOR = 'rgba(229, 231, 235, 0.7)';
+
+/**
+ * Mean per bucket over the *complete* buckets only – a part-week/month cut off by the range would
+ * drag the average down. Null when fewer than two complete buckets, where an average says nothing.
+ */
+const averageOf = (points: TrendPoint[], key: 'warranties' | 'claims') => {
+  const complete = points.filter((p) => !p.partial);
+  if (complete.length < 2) return null;
+  return complete.reduce((sum, p) => sum + p[key], 0) / complete.length;
+};
+
+const fmtAverage = (n: number) => (n < 10 ? n.toFixed(1) : Math.round(n).toLocaleString('en-MY'));
 
 // The charts share the x-axis via syncId; the tooltip shows both numbers, so only the hovered chart renders it.
 const TrendTooltip: React.FC<TooltipProps<number, string>> = ({ active, payload }) => {
@@ -41,7 +54,8 @@ const SeriesChart: React.FC<{
   showXAxis: boolean;
   showTooltip: boolean;
   onHover: (hovering: boolean) => void;
-}> = ({ points, dataKey, color, height, showXAxis, showTooltip, onHover }) => (
+  average: number | null;
+}> = ({ points, dataKey, color, height, showXAxis, showTooltip, onHover, average }) => (
   <div style={{ height }} onMouseEnter={() => onHover(true)} onMouseLeave={() => onHover(false)}>
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={points} syncId={SYNC_ID} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
@@ -61,16 +75,34 @@ const SeriesChart: React.FC<{
           {/* Partial buckets (cut off by the range) are dimmed so a short last week/month isn't misread as a drop. */}
           {points.map((p, i) => <Cell key={i} fill={color} fillOpacity={p.partial ? 0.45 : 1} />)}
         </Bar>
+        {average != null && (
+          <ReferenceLine y={average} stroke={AVERAGE_COLOR} strokeDasharray="4 4" strokeWidth={1.5} ifOverflow="extendDomain" />
+        )}
       </BarChart>
     </ResponsiveContainer>
   </div>
 );
 
-const SeriesHeader: React.FC<{ label: string; color: string; total: number }> = ({ label, color, total }) => (
-  <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
+const SeriesHeader: React.FC<{
+  label: string;
+  color: string;
+  total: number;
+  average: number | null;
+  granularity: Granularity;
+}> = ({ label, color, total, average, granularity }) => (
+  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-400 mb-1">
     <span className="h-2 w-2 rounded-full" style={{ background: color }} />
     {label}
     <span className="font-semibold tabular-nums text-white">{fmtInt(total)}</span>
+    {average != null && (
+      <span
+        className="ml-2 inline-flex items-center gap-1.5 cursor-help"
+        title={`Average per complete ${granularity} in this range (partial ${granularity}s excluded)`}
+      >
+        <span className="w-4 border-t-[1.5px] border-dashed" style={{ borderColor: AVERAGE_COLOR }} />
+        avg <span className="font-semibold tabular-nums text-gray-200">{fmtAverage(average)}</span> / {granularity}
+      </span>
+    )}
   </div>
 );
 
@@ -86,7 +118,9 @@ const TrendCharts: React.FC<{ range: DateRange }> = ({ range }) => {
   const granularity = chosen && allowed.includes(chosen) ? chosen : preferred;
   const { data, isLoading, isError } = useTrendData(range, granularity);
 
-  const totals = (data?.points ?? []).reduce(
+  const points = data?.points ?? [];
+  const averages = { warranties: averageOf(points, 'warranties'), claims: averageOf(points, 'claims') };
+  const totals = points.reduce(
     (t, p) => ({ warranties: t.warranties + p.warranties, claims: t.claims + p.claims }),
     { warranties: 0, claims: 0 },
   );
@@ -130,12 +164,12 @@ const TrendCharts: React.FC<{ range: DateRange }> = ({ range }) => {
       ) : (
         <div className="space-y-4">
           <div>
-            <SeriesHeader label="Warranties registered" color={WARRANTY_COLOR} total={totals.warranties} />
-            <SeriesChart points={data.points} dataKey="warranties" color={WARRANTY_COLOR} height={170} showXAxis={false} {...hoverProps('warranties')} />
+            <SeriesHeader label="Warranties registered" color={WARRANTY_COLOR} total={totals.warranties} average={averages.warranties} granularity={granularity} />
+            <SeriesChart points={data.points} dataKey="warranties" color={WARRANTY_COLOR} height={170} showXAxis={false} average={averages.warranties} {...hoverProps('warranties')} />
           </div>
           <div>
-            <SeriesHeader label="Claims filed" color={CLAIM_COLOR} total={totals.claims} />
-            <SeriesChart points={data.points} dataKey="claims" color={CLAIM_COLOR} height={140} showXAxis {...hoverProps('claims')} />
+            <SeriesHeader label="Claims filed" color={CLAIM_COLOR} total={totals.claims} average={averages.claims} granularity={granularity} />
+            <SeriesChart points={data.points} dataKey="claims" color={CLAIM_COLOR} height={140} showXAxis average={averages.claims} {...hoverProps('claims')} />
           </div>
         </div>
       )}
