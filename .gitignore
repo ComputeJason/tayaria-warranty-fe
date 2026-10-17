@@ -150,3 +150,5 @@ dist/
 # Temporary folders
 tmp/
 temp/ 
+# Real-data dashboard mock built from CSV exports (client business data) - never commit
+src/mocks/dashboardFixture.json
